@@ -35,7 +35,7 @@ namespace MSJServer.HTTP
 
         private string BuildUri(string path = "", string query = "")
         {
-            return new UriBuilder(Scheme, Hostname, 8080, path, query).ToString();
+            return new UriBuilder(Scheme, Hostname, 80, path, query).ToString();
         }
 
         public void Start()

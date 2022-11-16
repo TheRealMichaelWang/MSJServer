@@ -1,5 +1,6 @@
 ﻿using MSJServer.HTTP;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace MSJServer
 {
@@ -65,10 +66,16 @@ namespace MSJServer
         {
             Dictionary<string, string> signupInfo = context.Request.GetPOSTData();
 
+            if (!Regex.IsMatch(signupInfo["email"], "[a-z]+[0-9]{4}@mymail\\.lausd\\.net"))
+            {
+                RespondError(context, "Failed to Register New Account", "We apologize, but we're only accepting school emails([a-z]+[0-9]{4}@mymail\\.lausd\\.net) at the moment.");
+                return;
+            }
+
             Account? newAccount = RegisterAccount(signupInfo["username"], signupInfo["password"], signupInfo["email"]);
             if(newAccount == null)
             {
-                RespondError(context, "Failed to Register New Account", $"Username or email {signupInfo["username"]} already taken.");
+                RespondError(context, "Failed to Register New Account", $"Username {signupInfo["username"]} already taken.");
                 return;
             }
             LogAccountIn(context, newAccount);
