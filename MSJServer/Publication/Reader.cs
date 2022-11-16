@@ -19,10 +19,10 @@ namespace MSJServer
             content = content.Replace("{UPLOADTIME}", article.UploadTime.ToLongDateString());
             content = content.Replace("{BODY}", article.Body);
 
+            content = content.Replace("{ARTICLEID}", article.Id.ToString());
             if (article.PublishStatus == PublishStatus.UnderReview)
             {
                 content = content.Replace("{PUBLISHSTAT}", "This work is currently under review.");
-                content = content.Replace("{ARTICLEID}", article.Id.ToString());
                 content = content.Replace("{COMMENTS}", string.Join("<br>", Comment.LoadComments(id, false)));
             }
             else if (article.PublishStatus == PublishStatus.Rejected)
