@@ -66,6 +66,11 @@ namespace MSJServer
         {
             Dictionary<string, string> signupInfo = context.Request.GetPOSTData();
 
+            if (!Regex.IsMatch(signupInfo["username"], "[a-zA-Z0-9]{8,25}"))
+            {
+                RespondError(context, "Failed to Register New Account", "We apologize, but usernames must be alphanumerical and between 8 and 25 characters.");
+                return;
+            }
             if (!Regex.IsMatch(signupInfo["email"], "[a-z]+[0-9]{4}@mymail\\.lausd\\.net"))
             {
                 RespondError(context, "Failed to Register New Account", "We apologize, but we're only accepting school emails([a-z]+[0-9]{4}@mymail\\.lausd\\.net) at the moment.");

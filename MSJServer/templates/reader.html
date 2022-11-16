@@ -19,9 +19,9 @@
     <b>Submit A Comment</b>
     <form action="/comment" method="post">
         <textarea rows="3" id="msg" name="msg" placeholder="Youre comment here."></textarea><br>
-        <input type="radio" id="revise" name="revise" value="yes">Request Revision<br>
         <input type="submit" value="Comment" class="button" />
         <input type="hidden" name="id" id="id" value="{ARTICLEID}" />
+        <input type="hidden" name="revise" id="revise" value="no" />
     </form>
 </body>
 </html>
