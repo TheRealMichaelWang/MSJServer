@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Magnolia Street Journal</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <center>
+        <h1 class="title">{TITLE}</h1>
+        Written by <a href="/userinfo?username={AUTHOR}">{AUTHOR}</a>, {PUBLISHTIME} (uploaded {UPLOADTIME})
+        <br><br>
+        <p>{BODY}</p>
+        <a href="index" class="button">Return to Front Page</a> <br>
+    </center>
+    <hr>
+    {COMMENTS}
+    <b>Submit A Comment</b>
+    <form action="/comment" method="post">
+        <textarea rows="3" id="msg" name="msg" placeholder="Youre comment here."></textarea><br>
+        <input type="radio" id="revise" name="revise" value="yes">Request Revision<br>
+        <input type="submit" value="Comment" class="button" />
+        <input type="hidden" name="id" id="id" value="{ARTICLEID}" />
+    </form>
+</body>
+</html>

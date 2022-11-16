@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Magnolia Street Journal</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <center>
+        The <h1 class="title">Magnolia Street Journal</h1>
+        {DATE}<br><br>
+        <a href="/login.html" class="button">Login</a>
+        <a href="/signup.html" class="button">SignUp</a>
+        <a href="/index?day={TODAYTICKS}{INVFLAGS}" class="button">View {SECTION}</a><br>
+        <a href="/index?day={TOMMOROWTICKS}{EXTFLAGS}" class="button">{TOMMROW}'s Headlines</a>
+        <a href="/index?day={YESTARDAYTICKS}{EXTFLAGS}" class="button">{YESTARDAY}'s Headlines</a>
+    </center>
+    {DATA}
+</body>
+</html>

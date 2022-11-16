@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Magnolia Street Journal</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <center>
+        <h1 class="title">Sign-Up</h1>
+        We're glad you're signing up for a free, MSJ account!
+        <br><br>
+        <b>Note:</b>Your email is only used for recovery, nor will it be publically displayed; no email verification required. In addition, the your username entered here is immutable; there won't be any oppurtunities to modify it after registration.<br>
+        <form action="/signup" method="post">
+            <table>
+                <tr>
+                    <th><label for="username">Username:</label></th>
+                    <td><input type="text" name="username" id="username" /></td>
+                </tr>
+                <tr>
+                    <th><label for="password">Password:</label></th>
+                    <td><input type="password" name="password" id="password" /></td>
+                </tr>
+                <tr>
+                    <th><label for="username">Email:</label></th>
+                    <td><input type="text" name="email" id="email" /><br></td>
+                </tr>
+            </table>
+            <br>
+            <input type="submit" value="Sign Up" class="button" />
+        </form>
+        <a href="index" class="button">Return to Front Page</a>
+    </center>
+</body>
+</html>

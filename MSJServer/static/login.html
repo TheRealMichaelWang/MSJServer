@@ -1,0 +1,32 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Magnolia Street Journal</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <center>
+        <h1 class="title">Login</h1>
+        Please login to the MSJ if you wish to publish articles!
+        <br><br>
+        <form action="/login" method="post">
+            <table>
+                <tr>
+                    <th><label for="username">Username or Email:</label></th>
+                    <td><input type="text" name="username" id="username"/></td>
+                </tr>
+                <tr>
+                    <th><label for="password">Password:</label></th>
+                    <td><input type="password" name="password" id="password" /></td>
+                </tr>
+            </table>
+            <br>
+            <input type="submit" value="Login" class="button"/>
+        </form>
+        <a href="index" class="button">Return to Front Page</a> <br>
+        <a href="signup.html" class="button">Sign Up Instead</a>
+    </center>
+</body>
+</html>
