@@ -5,20 +5,11 @@ namespace MSJServer.HTTP
 {
     public partial class HTTPServer
     {
-        public string Hostname
-        {
-            get => "localhost";
-        }
+        public string Hostname => "*";
 
-        public string Scheme
-        {
-            get => "http";
-        }
+        public string Scheme => "http";
 
-        public string BaseURL
-        {
-            get => BuildUri();
-        }
+        public string BaseURL => BuildUri();
 
         private readonly RequestRouter router;
         private readonly HttpListener listener;
