@@ -36,6 +36,12 @@
             if(!SetAccountPerms(account, args[2]))
                 Console.WriteLine($"Unrecognized permission level {args[2]}.");
         }
+
+        public void ListUsersCommand(string[] args)
+        {
+            foreach (string key in accounts.Keys)
+                Console.WriteLine(key);
+        }
     }
 
     static class Program
@@ -45,7 +51,8 @@
         private static Dictionary<string, Action<string[]>> commands = new()
         {
             {"stop", Stop},
-            {"perm", server.SetPermsCommand}
+            {"perm", server.SetPermsCommand},
+            {"users", server.ListUsersCommand}
         };
 
         private static void Stop(string[] args)
