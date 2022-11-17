@@ -22,7 +22,7 @@ namespace MSJServer.HTTP
             listener = new HttpListener();
         }
 
-        public void ServeStatic(DirectoryInfo directory, string path) => router.ServeStatic(directory, path);
+        public void ServeStatic(DirectoryInfo directory, string path="") => router.ServeStatic(directory, path);
 
         private string BuildUri(string path = "", string query = "")
         {

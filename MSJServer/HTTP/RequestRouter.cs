@@ -33,10 +33,7 @@ namespace MSJServer.HTTP
         /*
          * Returns all possible http routes
          */
-        public IEnumerable<string> GetAllRoutes()
-        {
-            return requestHandlerRegisters.Values.SelectMany(r => r.Handlers.Keys).Union(servedStatic.Keys);
-        }
+        public IEnumerable<string> GetAllRoutes() => requestHandlerRegisters.Values.SelectMany(r => r.Handlers.Keys).Union(servedStatic.Keys);
 
         /*
          * Gets a request handler from an http handler. Can return volatile data.
@@ -59,11 +56,9 @@ namespace MSJServer.HTTP
             }
             if (requestMethod == HttpMethod.Get)
             {
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-                string staticMatch = servedStatic.Keys.FirstOrDefault(k => httpListenerRequest.Url.AbsolutePath.StartsWith(k));
+                string? staticMatch = servedStatic.Keys.FirstOrDefault(k => httpListenerRequest.Url.AbsolutePath.StartsWith(k));
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
                 string fileRelPath;
                 if (staticMatch != null)
                 {
@@ -71,22 +66,12 @@ namespace MSJServer.HTTP
                     fileRelPath = httpListenerRequest.Url.AbsolutePath.Substring(staticMatch.Length);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                     if (fileRelPath == "" || fileRelPath == "index")
-                        return requestHandlerRegisters[HttpMethod.Get].Handlers["/index"];
-                    string absoloute_path = Path.Combine(staticMatch, fileRelPath).Replace("/", "\\");
+                        return requestHandlerRegisters[HttpMethod.Post].Handlers["/index"];
+                    string absoloute_path = Path.Combine(servedStatic[staticMatch].FullName, fileRelPath).Replace("/", "\\");
                     if (absoloute_path.StartsWith("\\"))
                         absoloute_path = absoloute_path.TrimStart('\\');
                     if (File.Exists(absoloute_path))
                         return (context) => server.Respond202(context, File.ReadAllText(absoloute_path));
-                }
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-                else if (httpListenerRequest.Url.AbsolutePath.StartsWith("/"))
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-                {
-                    fileRelPath = httpListenerRequest.Url.AbsolutePath.TrimStart('/');
-                    if (File.Exists("static\\" + fileRelPath))
-                        return (context) => server.Respond202(context, File.ReadAllText("static\\" + fileRelPath));
-                    else if (string.IsNullOrEmpty(fileRelPath))
-                        return requestHandlerRegisters[HttpMethod.Get].Handlers["/index"];
                 }
             }
             return null;

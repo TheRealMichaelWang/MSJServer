@@ -16,6 +16,7 @@ namespace MSJServer
             GET["/editor"] = HandleEditorRequest;
             POST["/comment"] = HandleCommentRequest;
             GET["/index"] = HandleFrontPageAccess;
+            ServeStatic(new DirectoryInfo("static"));
 
             ThreadPool.QueueUserWorkItem((o) =>
             {
