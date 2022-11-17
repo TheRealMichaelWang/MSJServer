@@ -66,10 +66,11 @@ namespace MSJServer.HTTP
                     fileRelPath = httpListenerRequest.Url.AbsolutePath.Substring(staticMatch.Length);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                     if (fileRelPath == "" || fileRelPath == "index")
-                        return requestHandlerRegisters[HttpMethod.Post].Handlers["/index"];
-                    string absoloute_path = Path.Combine(servedStatic[staticMatch].FullName, fileRelPath).Replace("/", "\\");
-                    if (absoloute_path.StartsWith("\\"))
-                        absoloute_path = absoloute_path.TrimStart('\\');
+                        return requestHandlerRegisters[HttpMethod.Get].Handlers["/index"];
+                    string absoloute_path = Path.Combine(servedStatic[staticMatch].FullName, fileRelPath).Replace("\\", "/");
+                    if (!absoloute_path.StartsWith("/"))
+                        absoloute_path = '/' + absoloute_path;
+                    Console.WriteLine(absoloute_path);
                     if (File.Exists(absoloute_path))
                         return (context) => server.Respond202(context, File.ReadAllText(absoloute_path));
                 }

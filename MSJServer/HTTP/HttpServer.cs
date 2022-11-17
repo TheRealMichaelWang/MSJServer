@@ -68,8 +68,7 @@ namespace MSJServer.HTTP
                             }
                             catch (Exception e)
                             {
-                                ;
-                                //TODO: log it later
+                                Console.WriteLine(e);
                             }
                             finally
                             {
