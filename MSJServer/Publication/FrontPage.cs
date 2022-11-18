@@ -1,4 +1,4 @@
-using MSJServer.HTTP;
+﻿using MSJServer.HTTP;
 using System.Net;
 using System.Text;
 
@@ -57,8 +57,8 @@ namespace MSJServer
                     builder.Append($"<p class=\"card-text\">{article.Snippet}...</p>");
                     builder.Append($"<a class=\"btn\" style=\"background-color:#34A2A2\" href = \"/article?id={article.Id}\">Read More</a>");
                     if (article.PublishStatus == PublishStatus.UnderReview && isEditor)
-                        builder.Append("<br><b>Editor Attention Required!</b>");
-                    builder.Append($"</div></div>");
+                        builder.Append("<br><b class=\"mt-2 badge badge-warning\">Editor Attention Required!</b>");
+                    builder.Append($"</div><div class=\"card-footer bg-transparent\">By {article.Author}</div></div>");
                 }
                 builder.Append($"</div>");
                 content = content.Replace("{DATA}", builder.ToString());
