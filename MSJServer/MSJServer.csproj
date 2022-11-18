@@ -35,6 +35,9 @@
     <None Update="templates\reader.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="templates\revise.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="templates\userinfo_admin.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

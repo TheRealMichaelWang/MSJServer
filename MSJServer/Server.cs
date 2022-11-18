@@ -1,5 +1,6 @@
 ﻿using MSJServer.HTTP;
 using System.Net;
+using System.Text;
 
 namespace MSJServer
 {
@@ -15,6 +16,8 @@ namespace MSJServer
             GET["/setperms"] = HandleSetUserPermission;
             GET["/article"] = HandleReadArticle;
             POST["/upload"] = HandleUploadArticle;
+            POST["/revise"] = HandleReviseArticle;
+            GET["/revise_edit"] = HandleRevisionEditor;
             GET["/editor"] = HandleEditorRequest;
             POST["/comment"] = HandleCommentRequest;
             GET["/index"] = HandleFrontPageAccess;
@@ -44,11 +47,24 @@ namespace MSJServer
             });
         }
 
-        public void RespondError(HttpListenerContext context, string errorTitle, string errorDetails)
+        public void RespondError(HttpListenerContext context, string errorTitle, params string[] errorReasons)
         {
             string content = File.ReadAllText("templates/error.html");
             content = content.Replace("{ERRORTITLE}", errorTitle);
-            content = content.Replace("{ERRORDETAILS}", errorDetails);
+            if (errorReasons.Length == 0)
+                content = content.Replace("{ERRORDETAILS}", "No further information availible.");
+            else if(errorReasons.Length == 1)
+                content = content.Replace("{ERRORDETAILS}", errorReasons[0]);
+            else
+            {
+                StringBuilder builder = new();
+                builder.Append("One or more of the following reasons:<br>");
+                builder.Append("<ol type=\"1\">");
+                foreach (string reason in errorReasons)
+                    builder.Append($"<li>{reason}</li>");
+                builder.Append("</ol>");
+                content = content.Replace("{ERRORDETAILS}", builder.ToString());
+            }
             Respond202(context, content);
         }
     }

@@ -4,18 +4,21 @@
     {
         Published,
         UnderReview,
+        Revised,
         Rejected
     }
 
     public sealed class Article
     {
+        public static readonly byte CurrentVersion = 1;
+
         public static bool Exists(Guid id) => File.Exists("articles/" + id.ToString());
 
         public static Article FromFile(Guid id)
         {
             using(FileStream stream = new FileStream("articles/" + id.ToString(), FileMode.Open, FileAccess.Read))
             using(BinaryReader reader = new BinaryReader(stream))
-                return new Article(id, reader);
+                return FromReader(reader, id);
         }
 
         public static Guid[] GetPublishedArticles(DateOnly day, bool unpublished)
@@ -41,18 +44,34 @@
             return validArticles.ToArray();
         }
 
+        private static Article FromReader(BinaryReader reader, Guid id)
+        {
+            byte articleVersion = reader.ReadByte();
+            switch(articleVersion)
+            {
+                case 0:
+                    return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), Guid.Empty, Guid.Empty);
+                case 1:
+                    return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), new Guid(reader.ReadBytes(16)), new Guid(reader.ReadBytes(16)));
+                default:
+                    throw new InvalidOperationException($"Invalid article version {articleVersion}, for article {id}.");
+            }
+        }
+
         public Guid Id { get; private set; }
         public string Title { get; private set; }
         public string Body { get; private set; }
         public string Snippet => Body.Substring(0, Math.Min(Body.Length, 150));
-
         public string Author { get; private set; }
+
+        public Guid PreviousRevision { get; private set; }
+        public Guid NextRevision { get; private set; }
 
         public DateTime PublishTime { get; private set; }
         public DateTime UploadTime { get; private set; }
         public PublishStatus PublishStatus { get; private set; }
 
-        public Article(Guid id, string title, string body, string author, PublishStatus publishStatus, DateTime publishTime, DateTime uploadTime)
+        public Article(Guid id, string title, string body, string author, PublishStatus publishStatus, DateTime publishTime, DateTime uploadTime, Guid previousRevision, Guid nextRevision)
         {
             Id = id;
             Title = title;
@@ -61,18 +80,21 @@
             PublishStatus = publishStatus;
             PublishTime = publishTime;
             UploadTime = uploadTime;
+            PreviousRevision = previousRevision;
+            NextRevision = nextRevision;
         }
-
-        private Article(Guid id, BinaryReader reader) : this(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64())) { }
 
         private void WriteTo(BinaryWriter writer)
         {
+            writer.Write(CurrentVersion);
             writer.Write(Title);
             writer.Write(Body);
             writer.Write(Author);
             writer.Write((byte)PublishStatus);
             writer.Write(PublishTime.Ticks);
             writer.Write(UploadTime.Ticks);
+            writer.Write(PreviousRevision.ToByteArray());
+            writer.Write(NextRevision.ToByteArray());
         }
 
         public void Save()
@@ -99,6 +121,48 @@
 
             PublishStatus = PublishStatus.Rejected;
             Save();
+        }
+
+        public Article? Revise(Account newAuthor, string body)
+        {
+            if (PublishStatus == PublishStatus.Published || PublishStatus == PublishStatus.Revised)
+                return null;
+
+            if(newAuthor.Name == Author)
+            {
+                Article revised = new Article(Guid.NewGuid(), Title, body, Author, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Id, Guid.Empty);
+                PublishStatus = PublishStatus.Revised;
+                NextRevision = revised.Id;
+                Title = $"Unrevised {Title}, dated {UploadTime.ToShortDateString()}";
+                Save();
+                return revised;
+            }
+            else if(newAuthor.Permissions >= Permissions.Editor)
+            {
+                return new Article(Guid.NewGuid(), $"{Title} - Revised by {newAuthor.Name}", body, newAuthor.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Id, Guid.Empty);
+            }
+            return null;
+        }
+
+        public List<Comment> LoadComments(bool excludeRevisions)
+        {
+            if (PreviousRevision != Guid.Empty)
+            {
+                Article article = FromFile(PreviousRevision);
+                return article.LoadComments(excludeRevisions);
+            }
+            return Comment.LoadComments(Id, excludeRevisions);
+        }
+
+        public void MakeComment(Comment comment)
+        {
+            if (PreviousRevision != Guid.Empty)
+            {
+                Article article = FromFile(PreviousRevision);
+                article.MakeComment(comment);
+            }
+            else
+                Comment.MakeComment(Id, comment);
         }
     }
 }

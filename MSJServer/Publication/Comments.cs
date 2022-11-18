@@ -89,6 +89,12 @@ namespace MSJServer
             Guid id = Guid.Parse(commentInfo["id"]);
             bool requestRevision = commentInfo.ContainsKey("revise") && commentInfo["revise"] == "yes";
 
+            if (!Article.Exists(id))
+            {
+                RespondError(context, $"Failed to Make Comment", $"Are you sure article {id} exists?");
+                return;
+            }
+            Article article = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
             if (account == null)
             {
@@ -101,7 +107,7 @@ namespace MSJServer
                 return;
             }
 
-            Comment.MakeComment(id, new Comment(account.Name, commentInfo["msg"], requestRevision, DateTime.Now));
+            article.MakeComment(new Comment(account.Name, commentInfo["msg"], requestRevision, DateTime.Now));
             Redirect(context, $"/article?id={id}");
         }
     }

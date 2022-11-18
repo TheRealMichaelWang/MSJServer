@@ -17,9 +17,11 @@
         <a href="index" class="button">Return to Front Page</a> <br>
 
         <a href="/editor?op=publish&id={ARTICLEID}" class="button">Aprove Article for Publication</a><br>
-        <a href="/editor?op=reject&id={ARTICLEID}" class="button">Reject Article for Publication</a>
+        <a href="/editor?op=reject&id={ARTICLEID}" class="button">Reject Article for Publication</a><br>
+        <a href="/revise_edit?id={ARTICLEID}" class="button">Revise this Article</a>
     </center>
     <hr>
+    {PREVREV}
     {COMMENTS}
     <b>Submit A Comment</b>
     <form action="/comment" method="post">

@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Magnolia Street Journal</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <center>
+        <h1 class="title">Revise {TITLE}</h1>
+        <br><br>
+        <form action="/revise" method="post">
+            <textarea rows="10" id="body" name="body" placeholder="Type or copy and paste your revised article here article here."></textarea>
+            <br>
+            <input type="submit" value="Revise" class="button"/>
+            <input type="hidden" name="id" id="id" value="{ARTICLEID}"/>
+        </form>
+        <a href="index" class="button">Return to Front Page</a>
+    </center>
+</body>
+</html>
