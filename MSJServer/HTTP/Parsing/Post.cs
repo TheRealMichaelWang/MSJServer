@@ -26,7 +26,9 @@ namespace MSJServer.HTTP
             foreach(string? key in request.QueryString.Keys)
                 if (key != null)
 #pragma warning disable CS8604 // Possible null reference argument.
-                    keyValuePairs.Add(key, HttpUtility.UrlDecode(request.QueryString.Get(key), Encoding.UTF8));
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                    keyValuePairs.Add(key, HttpUtility.UrlDecode(request.QueryString.Get(key), Encoding.UTF8).Trim());
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 #pragma warning restore CS8604 // Possible null reference argument.
             return keyValuePairs;
         }
@@ -47,7 +49,7 @@ namespace MSJServer.HTTP
                 else
                     value += last_char;
             }
-            return new KeyValuePair<string, string>(key, HttpUtility.UrlDecode(value, Encoding.UTF8));
+            return new KeyValuePair<string, string>(key, HttpUtility.UrlDecode(value, Encoding.UTF8).Trim());
         }
     }
 }

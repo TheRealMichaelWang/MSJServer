@@ -13,6 +13,7 @@ namespace MSJServer.HTTP
 
         private readonly RequestRouter router;
         private readonly HttpListener listener;
+        protected volatile bool initialized = false;
 
         public HTTPServer()
         {
@@ -31,6 +32,8 @@ namespace MSJServer.HTTP
 
         public void Start()
         {
+            while (!initialized) { }
+
             router.GetAllRoutes().ToList().ForEach(route =>
             {
                 string query = string.Empty;

@@ -90,7 +90,7 @@ namespace MSJServer
             }
         }
 
-        private Dictionary<string, Account> accounts = LoadAccounts();
+        private Dictionary<string, Account> accounts;
 
         public Account? RegisterAccount(string username, string password, string email)
         {

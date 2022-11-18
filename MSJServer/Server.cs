@@ -7,6 +7,8 @@ namespace MSJServer
     {
         public Server()
         {
+            accounts = LoadAccounts();
+
             POST["/login"] = HandleLogin;
             POST["/signup"] = HandleSignup;
             GET["/userinfo"] = HandleGetUserInfo;
@@ -18,6 +20,7 @@ namespace MSJServer
             GET["/index"] = HandleFrontPageAccess;
             ServeStatic(new DirectoryInfo("static"));
 
+            base.initialized = true;
             ThreadPool.QueueUserWorkItem((o) =>
             {
                 while (true)
