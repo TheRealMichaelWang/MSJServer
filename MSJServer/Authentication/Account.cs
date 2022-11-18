@@ -57,10 +57,11 @@ namespace MSJServer
                 using (BinaryWriter writer = new BinaryWriter(stream))
                     writer.Write(count + 1);
             }
-            using (FileStream stream = new FileStream("accounts.db", FileMode.Append, FileAccess.Write))
+            using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.Write))
             using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
             {
-                long oldPosition = stream.Position;
+                long oldPosition = accountSize;
+                stream.Position = oldPosition;
                 accountOffsets.Add(account, oldPosition);
                 account.WriteTo(writer);
                 accountSizes.Add(account, stream.Position - oldPosition);

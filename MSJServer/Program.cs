@@ -81,8 +81,9 @@
                 if (commandArgs.Length < 1)
                     continue;
 
-                if (commands.ContainsKey(commandArgs[0])) {
-                    try 
+                if (commands.ContainsKey(commandArgs[0]))
+                {
+                    try
                     {
                         commands[commandArgs[0]].Invoke(commandArgs);
                     }
