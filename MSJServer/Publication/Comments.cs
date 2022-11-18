@@ -78,7 +78,7 @@ namespace MSJServer
             writer.Write(Created.Ticks);
         }
 
-        public override string ToString() => $"<b><a href=\"/userinfo?username={Sender}\">{Sender}:</a>({Created.ToShortTimeString()}{(RevisionRequested ? ", revision requested" : string.Empty)})</b><br>&emsp;{Content}<hr>";
+        public override string ToString() => $"<div><a href=\"/userinfo?username={Sender}\">{Sender}</a><a class=\"text-muted\"> • {Created.ToShortTimeString()}</a><a><span class=\"badge badge-primary mx-1\">{(RevisionRequested ? "Revision Requested" : string.Empty)}</span></a></div>{Content}<hr>";
     }
 
     partial class Server
