@@ -1,4 +1,4 @@
-﻿using MSJServer.HTTP;
+using MSJServer.HTTP;
 using System.Net;
 using System.Text;
 
@@ -12,12 +12,12 @@ namespace MSJServer
 
             DateOnly day = queryInfo.ContainsKey("day") ? DateOnly.FromDayNumber(int.Parse(queryInfo["day"])) : DateOnly.FromDateTime(DateTime.Now);
             DateOnly nextDay = day.AddDays(1);
-            DateOnly prevDay = day.AddDays(-1); 
+            DateOnly prevDay = day.AddDays(-1);
 
             Account? account = GetLoggedInAccount(context);
             string content;
             bool isEditor = false;
-            if (account == null) 
+            if (account == null)
                 content = File.ReadAllText("templates/index.html");
             else
             {
@@ -37,20 +37,30 @@ namespace MSJServer
 
             Guid[] publishedArticles = Article.GetPublishedArticles(day, queryInfo.ContainsKey("unpub"));
             if (publishedArticles.Length == 0)
-                content = content.Replace("{DATA}", $"As of yet, no articles were published on {day.ToLongDateString()}.");
+                content = content.Replace("{DATA}", $"<div class=\"alert alert-primary\" role=\"alert\">As of yet, no articles were published on {day.ToLongDateString()}.</div>");
             else
             {
                 StringBuilder builder = new StringBuilder();
-                builder.Append("<hr>");
-                foreach(Guid articleGuid in publishedArticles)
+                for (int i = 0; i < publishedArticles.Length; i++)
                 {
-                    Article article = Article.FromFile(articleGuid);
-                    builder.Append($"<h3><a href = \"/article?id={article.Id}\">{article.Title}</a></h3>");
-                    builder.Append($"<p>{article.Snippet}...</p>");
+                    if (i % 6 == 0)
+                    {
+                        if (i != 0)
+                        {
+                            builder.Append($"</div>");
+                        }
+                        builder.Append($"<div class=\"card-deck mx-auto\">");
+                    }
+                    Article article = Article.FromFile((Guid)publishedArticles.GetValue(i));
+                    builder.Append($"<div class=\"card mb-3\" style=\"max-width:400px\"><img src=\"https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png\" class=\"card-img-top\" alt=\"...\"><div class=\"card-body\">");
+                    builder.Append($"<h5 class=\"card-title\">{article.Title}</h5>");
+                    builder.Append($"<p class=\"card-text\">{article.Snippet}...</p>");
+                    builder.Append($"<a class=\"btn\" style=\"background-color:#34A2A2\" href = \"/article?id={article.Id}\">Read More</a>");
                     if (article.PublishStatus == PublishStatus.UnderReview && isEditor)
                         builder.Append("<br><b>Editor Attention Required!</b>");
-                    builder.Append("<hr>");
+                    builder.Append($"</div></div>");
                 }
+                builder.Append($"</div>");
                 content = content.Replace("{DATA}", builder.ToString());
             }
             Respond202(context, content);
