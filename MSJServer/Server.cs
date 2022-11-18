@@ -30,16 +30,16 @@ namespace MSJServer
                 {
                     DateTime scanTime = DateTime.Now;
                     List<Guid> sessionsToRemove = new();
-                    foreach (var session in sessions)
-                    {
-                        if (scanTime > session.Value.Item2)
-                        {
-                            sessionsToRemove.Add(session.Key);
-                            session.Value.Item1.IsLoggedIn = false;
-                        }
-                    }
                     lock (sessions)
                     {
+                        foreach (var session in sessions)
+                        {
+                            if (scanTime > session.Value.Item2)
+                            {
+                                sessionsToRemove.Add(session.Key);
+                                session.Value.Item1.IsLoggedIn = false;
+                            }
+                        }
                         foreach (var session in sessionsToRemove)
                             sessions.Remove(session);
                     }
