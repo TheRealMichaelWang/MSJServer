@@ -20,7 +20,6 @@ namespace MSJServer
             content = content.Replace("{AUTHOR}", article.Author);
             content = content.Replace("{UPLOADTIME}", article.UploadTime.ToLongDateString());
             content = content.Replace("{BODY}", article.Body);
-            content = content.Replace("{ARTICLEID}", article.Id.ToString());
             content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published)));
             
             if (article.PublishStatus == PublishStatus.UnderReview)
@@ -57,6 +56,7 @@ namespace MSJServer
                 content = content.Replace("{CHECK}", string.Empty);
                 content = content.Replace("{BUTTONS}", string.Empty);
             }
+            content = content.Replace("{ARTICLEID}", article.Id.ToString());
             Respond202(context, content);
         }
 
