@@ -14,20 +14,14 @@ namespace MSJServer
             }
             Article article = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
-            bool isEditor = false;
-            bool isOwner = false;
-            if (account != null)
-            {
-                isEditor = account.Permissions >= Permissions.Editor;
-                isOwner = account.Name.Equals(article.Author);
-            }
+
             string content = File.ReadAllText(article.PublishStatus == PublishStatus.Published ? "templates/reader.html" : "templates/reader_unpub.html");
             content = content.Replace("{TITLE}", article.Title);
             content = content.Replace("{AUTHOR}", article.Author);
             content = content.Replace("{UPLOADTIME}", article.UploadTime.ToLongDateString());
             content = content.Replace("{BODY}", article.Body);
-
             content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published)));
+            
             if (article.PublishStatus == PublishStatus.UnderReview)
                 content = content.Replace("{PUBLISHSTAT}", "<div class=\"alert alert-warning\">This work is currently under review.</div>");
             else if (article.PublishStatus == PublishStatus.Rejected)
@@ -41,25 +35,27 @@ namespace MSJServer
             }
             else
                 content = content.Replace("{PUBLISHTIME}", article.PublishTime.ToLongDateString());
+            
             if (article.PreviousRevision != Guid.Empty)
                 content = content.Replace("{PREVREV}", $"<a href = \"/article?id={article.PreviousRevision}\" class=\"btn btn-outline-secondary\">Previous Revision</a>");
             else
                 content = content.Replace("{PREVREV}", string.Empty);
-            if (isOwner && (isEditor && article.PublishStatus != PublishStatus.Rejected))
-                content = content.Replace("{BUTTONS}", "<div><a href=\"/editor?op=publish&id={ARTICLEID}\" class=\"btn btn-outline-success mx-1\">Aprove Article for Publication</a><a href=\"/editor?op=reject&id={ARTICLEID}\" class=\"btn btn-outline-danger\">Reject Article for Publication</a></div><a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
-            if (isOwner)
-                content = content.Replace("{BUTTONS}", "<a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
-            if (isEditor)
+
+            if (account != null && account.Permissions >= Permissions.Editor)
             {
                 content = content.Replace("{CHECK}", "<input class=\"form-check-label\" type=\"checkbox\" id=\"revise\" name=\"revise\" value=\"yes\">Request Revision");
-                if (article.PublishStatus != PublishStatus.Rejected)
-                    content = content.Replace("{BUTTONS}", "<div><a href=\"/editor?op=publish&id={ARTICLEID}\" class=\"btn btn-outline-success\">Aprove Article for Publication</a><a href=\"/editor?op=reject&id={ARTICLEID}\" class=\"btn btn-outline-danger\">Reject Article for Publication</a></div>");
-            } else
+                content = content.Replace("{BUTTONS}", "<div><a href=\"/editor?op=publish&id={ARTICLEID}\" class=\"btn btn-outline-success mx-1\">Aprove Article for Publication</a><a href=\"/editor?op=reject&id={ARTICLEID}\" class=\"btn btn-outline-danger\">Reject Article for Publication</a></div><a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
+            }
+            else if (account != null && account.Name == article.Author)
             {
                 content = content.Replace("{CHECK}", string.Empty);
+                content = content.Replace("{BUTTONS}", "<a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
             }
-            if (!isEditor && !isOwner)
+            else
+            {
+                content = content.Replace("{CHECK}", string.Empty);
                 content = content.Replace("{BUTTONS}", string.Empty);
+            }
             content = content.Replace("{ARTICLEID}", article.Id.ToString());
             Respond202(context, content);
         }

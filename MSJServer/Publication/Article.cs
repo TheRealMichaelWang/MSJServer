@@ -1,4 +1,6 @@
-﻿namespace MSJServer
+﻿using System.Text.RegularExpressions;
+
+namespace MSJServer
 {
     public enum PublishStatus
     {
@@ -16,8 +18,8 @@
 
         public static Article FromFile(Guid id)
         {
-            using(FileStream stream = new FileStream("articles/" + id.ToString(), FileMode.Open, FileAccess.Read))
-            using(BinaryReader reader = new BinaryReader(stream))
+            using (FileStream stream = new FileStream("articles/" + id.ToString(), FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(stream))
                 return FromReader(reader, id);
         }
 
@@ -47,7 +49,7 @@
         private static Article FromReader(BinaryReader reader, Guid id)
         {
             byte articleVersion = reader.ReadByte();
-            switch(articleVersion)
+            switch (articleVersion)
             {
                 case 0:
                     return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), Guid.Empty, Guid.Empty);
@@ -61,8 +63,16 @@
         public Guid Id { get; private set; }
         public string Title { get; private set; }
         public string Body { get; private set; }
-        public string Snippet => Body.Substring(0, Math.Min(Body.Length, 150));
         public string Author { get; private set; }
+
+        public string Snippet
+        {
+            get
+            {
+                string nohtml = Regex.Replace(Body, "<.*?>", string.Empty);
+                return nohtml.Substring(0, Math.Min(nohtml.Length, 150));
+            }
+        }
 
         public Guid PreviousRevision { get; private set; }
         public Guid NextRevision { get; private set; }
