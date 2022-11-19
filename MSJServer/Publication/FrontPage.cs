@@ -56,8 +56,15 @@ namespace MSJServer
                     builder.Append($"<h5 class=\"card-title\">{article.Title}</h5>");
                     builder.Append($"<p class=\"card-text\">{article.Snippet}...</p>");
                     builder.Append($"<a class=\"btn\" style=\"background-color:#34A2A2\" href = \"/article?id={article.Id}\">Read More</a>");
-                    if (article.PublishStatus == PublishStatus.UnderReview && isEditor)
-                        builder.Append("<br><b class=\"mt-2 badge badge-warning\">Editor Attention Required!</b>");
+                    if (isEditor)
+                    {
+                        if (article.PublishStatus == PublishStatus.UnderReview)
+                            builder.Append("<br><b class=\"mt-2 badge badge-warning\">Editor Attention Required!</b>");
+                    }
+                    if (article.PublishStatus == PublishStatus.Revised)
+                        builder.Append("<br><b class=\"mt-2 badge badge-secondary\">Old Revision</b>");
+                    else if (article.PublishStatus == PublishStatus.Rejected)
+                        builder.Append("<br><b class=\"mt-2 badge badge-danger\">Rejected</b>");
                     builder.Append($"</div><div class=\"card-footer bg-transparent\">By {article.Author}</div></div>");
                 }
                 builder.Append($"</div>");

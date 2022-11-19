@@ -16,17 +16,17 @@
     <div class="container">
         <center>
             <h1 style="font-family:fantasy" class="title">{TITLE}</h1>
-            <div class="alert alert-primary"><b>Note from the Editors: </b> Although this work is activley displayed on our website, it hasn't yet been officially published. {PUBLISHSTAT}</div>
+            <div class="alert alert-primary"><b>Note from the Editors: </b> Although this work is activley displayed on our website, it hasn't yet been officially published.</div>
+            {PUBLISHSTAT}
             <hr>
-            <p class="text-muted">Written by <a href="/userinfo?username={AUTHOR}">{AUTHOR}</a>, {PUBLISHTIME} (uploaded {UPLOADTIME})</p>
+            <p class="text-muted">Written by <a href="/userinfo?username={AUTHOR}">{AUTHOR}</a>, (uploaded {UPLOADTIME})</p>
         </center>
         <br>
         <p>{BODY}</p>
     </div>
     <br>
     <center>
-        <div><a href="/editor?op=publish&id={ARTICLEID}" class="btn btn-outline-success">Aprove Article for Publication</a><a href="/editor?op=reject&id={ARTICLEID}" class="btn btn-outline-danger">Reject Article for Publication</a></div>
-        <a href="/revise_edit?id={ARTICLEID}" class="btn btn-outline-secondary">Revise this Article</a>
+        {BUTTONS}
         {PREVREV}
     </center>
     <div class="container">
@@ -34,11 +34,32 @@
         <b>Submit A Comment</b>
         <form action="/comment" method="post">
             <textarea class="form-control" rows="3" id="msg" name="msg" placeholder="Youre comment here."></textarea>
-            <div class="mt-1"><input type="submit" value="Comment" class="btn btn-outline-secondary" />
-            <input class="form-check-label" type="checkbox" id="revise" name="revise" value="yes">Request Revision</div><br>
+            <div class="mt-1">
+                <input type="submit" value="Comment" class="btn btn-outline-secondary" />
+                {CHECK}
+            </div><br>
             <input type="hidden" name="id" id="id" value="{ARTICLEID}" />
         </form>
         {COMMENTS}
     </div>
+
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        tinymce.init({
+            selector: 'textarea#msg',
+            height: 150,
+            menubar: false,
+            plugins: [
+                'advlist autolink lists link image charmap print preview anchor',
+                'searchreplace visualblocks code fullscreen',
+                'insertdatetime media table paste code help wordcount'
+            ],
+            toolbar: 'undo redo | formatselect | ' +
+                'bold italic backcolor | alignleft aligncenter ' +
+                'alignright alignjustify | bullist numlist outdent indent | ' +
+                'removeformat | help',
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        });
+    </script>
 </body>
 </html>

@@ -19,10 +19,13 @@
             <hr>
             <p class="text-muted">Written by <a href="/userinfo?username={AUTHOR}">{AUTHOR}</a>, {PUBLISHTIME} (uploaded {UPLOADTIME})</p>
         </center>
-        <br><br>
+        <br>
         <p>{BODY}</p>
     </div>
-    <hr>
+    <br>
+    <center>
+        {PREVREV}
+    </center>
     <div class="container">
         <hr>
         <b>Submit A Comment</b>
@@ -35,5 +38,22 @@
         </form>
         {COMMENTS}
     </div>
+
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>tinymce.init({
+            selector: 'textarea#msg',
+            height: 150,
+            menubar: false,
+            plugins: [
+                'advlist autolink lists link image charmap print preview anchor',
+                'searchreplace visualblocks code fullscreen',
+                'insertdatetime media table paste code help wordcount'
+            ],
+            toolbar: 'undo redo | formatselect | ' +
+                'bold italic backcolor | alignleft aligncenter ' +
+                'alignright alignjustify | bullist numlist outdent indent | ' +
+                'removeformat | help',
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        });</script>
 </body>
 </html>
