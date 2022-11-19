@@ -43,29 +43,31 @@ namespace MSJServer
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < publishedArticles.Length; i++)
                 {
-                    if (i % 6 == 0)
+                    if ((i + 2) % 5 == 0 || i % 5 == 0)
                     {
                         if (i != 0)
                         {
                             builder.Append($"</div>");
                         }
-                        builder.Append($"<div class=\"card-deck mx-auto\">");
+                        builder.Append($"<div class=\"row\">");
                     }
                     Article article = Article.FromFile((Guid)publishedArticles.GetValue(i));
-                    builder.Append($"<div class=\"card mb-3\" style=\"max-width:400px\"><img src=\"https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png\" class=\"card-img-top\" alt=\"...\"><div class=\"card-body\">");
+                    var random = new Random();
+                    var color = String.Format("#{0:X6}", random.Next(0x1000000));
+                    builder.Append($"<div class=\"col-sm\"><div class=\"card mb-3\" style=\"max-width:540px\"><div class=\"row no-gutters\"><div class=\"col-md-4\" style=\"background-color:{color};\"></div><div class=\"col-md-8\"><div class=\"card-body\">");
                     builder.Append($"<h5 class=\"card-title\">{article.Title}</h5>");
                     builder.Append($"<p class=\"card-text\">{article.Snippet}...</p>");
-                    builder.Append($"<a class=\"btn\" style=\"background-color:#34A2A2\" href = \"/article?id={article.Id}\">Read More</a>");
+                    builder.Append($"<a class=\"btn btn-outline-secondary\" href = \"/article?id={article.Id}\">Read More</a>");
                     if (isEditor)
                     {
                         if (article.PublishStatus == PublishStatus.UnderReview)
-                            builder.Append("<br><b class=\"mt-2 badge badge-warning\">Editor Attention Required!</b>");
+                            builder.Append("<br><b class=\"mt-2 badge badge-warning\">Pending</b>");
                     }
                     if (article.PublishStatus == PublishStatus.Revised)
                         builder.Append("<br><b class=\"mt-2 badge badge-secondary\">Old Revision</b>");
                     else if (article.PublishStatus == PublishStatus.Rejected)
                         builder.Append("<br><b class=\"mt-2 badge badge-danger\">Rejected</b>");
-                    builder.Append($"</div><div class=\"card-footer bg-transparent\">By {article.Author}</div></div>");
+                    builder.Append($"</div><div class=\"card-footer bg-transparent text-muted\">Written by <a href=\"/userinfo?username={article.Author}\">{article.Author}</a></div></div></div></div></div>");
                 }
                 builder.Append($"</div>");
                 content = content.Replace("{DATA}", builder.ToString());
