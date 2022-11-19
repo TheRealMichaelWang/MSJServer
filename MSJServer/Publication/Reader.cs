@@ -14,13 +14,7 @@ namespace MSJServer
             }
             Article article = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
-            bool isEditor = false;
-            bool isOwner = false;
-            if (account != null)
-            {
-                isEditor = account.Permissions >= Permissions.Editor;
-                isOwner = account.Name.Equals(article.Author);
-            }
+
             string content = File.ReadAllText(article.PublishStatus == PublishStatus.Published ? "templates/reader.html" : "templates/reader_unpub.html");
             content = content.Replace("{TITLE}", article.Title);
             content = content.Replace("{AUTHOR}", article.Author);
@@ -48,12 +42,12 @@ namespace MSJServer
             else
                 content = content.Replace("{PREVREV}", string.Empty);
 
-            if (isEditor)
+            if (account != null && account.Permissions >= Permissions.Editor)
             {
                 content = content.Replace("{CHECK}", "<input class=\"form-check-label\" type=\"checkbox\" id=\"revise\" name=\"revise\" value=\"yes\">Request Revision");
                 content = content.Replace("{BUTTONS}", "<div><a href=\"/editor?op=publish&id={ARTICLEID}\" class=\"btn btn-outline-success mx-1\">Aprove Article for Publication</a><a href=\"/editor?op=reject&id={ARTICLEID}\" class=\"btn btn-outline-danger\">Reject Article for Publication</a></div><a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
             }
-            else if (isOwner)
+            else if (account != null && account.Name == article.Author)
             {
                 content = content.Replace("{CHECK}", string.Empty);
                 content = content.Replace("{BUTTONS}", "<a href=\"/revise_edit?id={ARTICLEID}\" class=\"btn btn-outline-secondary\">Revise this Article</a>");
