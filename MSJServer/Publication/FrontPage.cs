@@ -65,7 +65,7 @@ namespace MSJServer
                         builder.Append("<br><b class=\"mt-2 badge badge-secondary\">Old Revision</b>");
                     else if (article.PublishStatus == PublishStatus.Rejected)
                         builder.Append("<br><b class=\"mt-2 badge badge-danger\">Rejected</b>");
-                    builder.Append($"</div><div class=\"card-footer bg-transparent\">By {article.Author}</div></div>");
+                    builder.Append($"</div><div class=\"card-footer bg-transparent text-muted\">Written by <a href=\"/userinfo?username={article.Author}\">{article.Author}</a></div></div>");
                 }
                 builder.Append($"</div>");
                 content = content.Replace("{DATA}", builder.ToString());
