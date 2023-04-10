@@ -23,7 +23,7 @@ namespace MSJServer
                 return FromReader(reader, id);
         }
 
-        public static Guid[] GetPublishedArticles(DateOnly day, bool unpublished)
+        public static Guid[] GetPublishedArticles(bool unpublished)
         {
             string[] paths = Directory.GetFiles("articles");
             List<Guid> validArticles = new List<Guid>(10);
@@ -37,11 +37,12 @@ namespace MSJServer
                 {
                     if (article.PublishStatus == PublishStatus.Published)
                         continue;
-                    if (day.DayNumber == DateOnly.FromDateTime(article.UploadTime).DayNumber)
-                        validArticles.Add(article.Id);
-                }
-                else if (day.DayNumber == DateOnly.FromDateTime(article.PublishTime).DayNumber)
                     validArticles.Add(article.Id);
+                }
+                else if (article.PublishStatus == PublishStatus.Published)
+                {
+                    validArticles.Add(article.Id);
+                }
             }
             return validArticles.ToArray();
         }
@@ -109,8 +110,8 @@ namespace MSJServer
 
         public void Save()
         {
-            using(FileStream stream = new FileStream("articles/"+Id.ToString(), FileMode.OpenOrCreate, FileAccess.Write))
-            using(BinaryWriter writer = new BinaryWriter(stream))
+            using (FileStream stream = new FileStream("articles/" + Id.ToString(), FileMode.OpenOrCreate, FileAccess.Write))
+            using (BinaryWriter writer = new BinaryWriter(stream))
                 WriteTo(writer);
         }
 
@@ -138,7 +139,7 @@ namespace MSJServer
             if (PublishStatus == PublishStatus.Published || PublishStatus == PublishStatus.Revised)
                 return null;
 
-            if(newAuthor.Name == Author)
+            if (newAuthor.Name == Author)
             {
                 Article revised = new Article(Guid.NewGuid(), Title, body, Author, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Id, Guid.Empty);
                 PublishStatus = PublishStatus.Revised;
@@ -147,7 +148,7 @@ namespace MSJServer
                 Save();
                 return revised;
             }
-            else if(newAuthor.Permissions >= Permissions.Editor)
+            else if (newAuthor.Permissions >= Permissions.Editor)
             {
                 return new Article(Guid.NewGuid(), $"{Title} - Revised by {newAuthor.Name}", body, newAuthor.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Id, Guid.Empty);
             }
