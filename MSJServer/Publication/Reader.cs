@@ -84,6 +84,9 @@ namespace MSJServer
 
             Article article = new Article(Guid.NewGuid(), articleInfo["title"], articleInfo["body"], account.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Guid.Empty, Guid.Empty);
             article.Save();
+
+            ThreadPool.QueueUserWorkItem((o) => AIEditor.Revise(article));
+
             Redirect(context, $"/article?id={article.Id}");
         }
 
