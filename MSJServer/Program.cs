@@ -52,7 +52,7 @@
             }
 
             Account account = accounts[args[1]];
-            EmailNotifier.Notify(account, args.Length >= 4 ? args[3] : "MSJ Console-Invoked Notification", args[2]);
+            EmailNotifier.Notify(account.Email, args.Length >= 4 ? args[3] : "MSJ Console-Invoked Notification", args[2]);
         }
     }
 
@@ -92,8 +92,6 @@
             }
             else
                 Console.WriteLine("Skiping server start...");
-
-            server.NotifyUserCommand(new string[] { "notify", "therealmichaelwang", "this is a non-prod test msg." });
 
             while (!stop)
             {

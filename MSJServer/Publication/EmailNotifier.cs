@@ -1,11 +1,13 @@
 ﻿using DnsClient;
 using DnsClient.Protocol;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Net.Mail;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -15,7 +17,7 @@ namespace MSJServer
 {
     public static class EmailNotifier
     {
-        private static MxRecord SMTPServer;
+        private static MxRecord SMTPServerRecord;
 
 #pragma warning disable CS8618
         static EmailNotifier()
@@ -24,36 +26,49 @@ namespace MSJServer
             LookupClient client = new();
 #pragma warning disable CS8600 // Almost always will return answers, gmail.com is gmail
 #pragma warning disable CS8601
-            SMTPServer = (MxRecord)client.Query("gmail.com", QueryType.MX).Answers.MinBy((answer) => ((MxRecord)answer).Preference);
+            SMTPServerRecord = (MxRecord)client.Query("gmail.com", QueryType.MX).Answers.MinBy((answer) => ((MxRecord)answer).Preference);
 #pragma warning restore CS8601
 #pragma warning restore CS8600
-
             ServicePointManager.ServerCertificateValidationCallback += new RemoteCertificateValidationCallback(ValidateRemoteCertificate);
         }
 
         private static bool ValidateRemoteCertificate(object sender, X509Certificate? cert, X509Chain? chain, SslPolicyErrors policyErrors) => policyErrors == SslPolicyErrors.RemoteCertificateNameMismatch && (cert != null && cert.Subject.EndsWith("google.com"));
 
-        public static void Notify(Account account, string subject, string body)
+        public static bool Notify(string email, string subject, string body)
         {
-            try
+            using (SmtpClient client = new SmtpClient())
+            using (MimeMessage message = new MimeMessage())
             {
-                using (SmtpClient client = new(SMTPServer.Exchange, 25))
-                using (MailMessage message = new MailMessage(new MailAddress("noreply@104.174.17.83", "The Magnolia Street Journal"), new MailAddress(account.Email, account.Name)))
+                message.From.Add(InternetAddress.Parse("no-reply@themsj.org"));
+                message.To.Add(InternetAddress.Parse(email));
+                message.Subject = subject;
+                message.Body = new TextPart(MimeKit.Text.TextFormat.Plain) { Text = body };
+
+                try
                 {
-                    message.Subject = subject;
-                    message.SubjectEncoding = Encoding.UTF8;
-                    message.Body = body;
-                    message.BodyEncoding = Encoding.UTF8;
+                    client.Connect(SMTPServerRecord.Exchange, 25, SecureSocketOptions.StartTls);
 
-                    client.UseDefaultCredentials = false;
-                    client.EnableSsl = true;
+                    bool failed;
+                    try
+                    {
+                        client.Send(message);
+                        failed = false;
+                    }
+                    catch
+                    {
+                        failed = true;
+                    }
+                    finally
+                    {
+                        client.Disconnect(true);
+                    }
 
-                    client.Send(message);
+                    return !failed;
                 }
-            }
-            catch (SmtpException e)
-            {
-                ;
+                catch
+                {
+                    return false; //connection was never established
+                }
             }
         }
     }
