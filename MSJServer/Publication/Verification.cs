@@ -95,7 +95,7 @@ namespace MSJServer
                 Redirect(context, "index");
             }
             else
-                Redirect(context, $"verify_landing/verif_code?=\"{data["verifcode"]}\"");
+                Redirect(context, $"/verify_landing?verif_code=\"{data["verifcode"]}\"");
         }
     }
 }

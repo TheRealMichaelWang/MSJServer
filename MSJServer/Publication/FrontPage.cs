@@ -17,6 +17,12 @@ namespace MSJServer
                 content = File.ReadAllText("templates/index.html");
             else
             {
+                if (!account.IsVerified)
+                {
+                    Redirect(context, "verify_landing");
+                    return;
+                }
+
                 content = File.ReadAllText("templates/index_signin.html");
                 content = content.Replace("{USERNAME}", account.Name);
                 isEditor = (account.Permissions >= Permissions.Editor);
