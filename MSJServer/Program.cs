@@ -26,21 +26,49 @@
 
         public void SetPermsCommand(string[] args)
         {
-            if(!accounts.ContainsKey(args[1]))
+            if (!accounts.ContainsKey(args[1]))
             {
                 Console.WriteLine($"No such user {args[1]}.");
                 return;
             }
 
             Account account = accounts[args[1]];
-            if(!SetAccountPerms(account, args[2]))
+            if (!SetAccountPerms(account, args[2]))
                 Console.WriteLine($"Unrecognized permission level {args[2]}.");
+        }
+
+        public void VerifyUserCommand(string[] args)
+        {
+            if (!accounts.ContainsKey(args[1]))
+            {
+                Console.WriteLine($"No such user {args[1]}.");
+                return;
+            }
+
+            Account account = accounts[args[1]];
+            account.IsVerified = true;
         }
 
         public void ListUsersCommand(string[] args)
         {
             foreach (string key in accounts.Keys)
                 Console.WriteLine(key);
+        }
+
+        public void GetUserInfoCommand(string[] args)
+        {
+            if (!accounts.ContainsKey(args[1]))
+            {
+                Console.WriteLine($"No such user {args[1]}.");
+                return;
+            }
+
+            Account account = accounts[args[1]];
+            Console.WriteLine($"Name: {account.Name}");
+            Console.WriteLine($"Perms: {PermissionsHelper.GetDescription(account.Permissions)}");
+            Console.WriteLine($"Email: {account.Email}");
+            Console.WriteLine($"Created: {account.CreationDate}");
+            Console.WriteLine($"IsVerified: {account.IsVerified}");
         }
 
         public void NotifyUserCommand(string[] args)
@@ -58,17 +86,26 @@
 
     static class Program
     {
+        //indicates whether the program is running in a production environment or not
         public static bool IsProduction { get; private set; }
 
-        private static Server server = new Server();
+        private static Server server;
         private static bool stop = false;
-        private static Dictionary<string, Action<string[]>> commands = new()
+        private static Dictionary<string, Action<string[]>> commands;
+
+        static Program()
         {
-            {"stop", Stop},
-            {"perm", server.SetPermsCommand},
-            {"users", server.ListUsersCommand},
-            {"notify", server.NotifyUserCommand}
-        };
+            server = new Server();
+            commands = new()
+            {
+                {"stop", Stop},
+                {"perm", server.SetPermsCommand},
+                {"users", server.ListUsersCommand},
+                {"notify", server.NotifyUserCommand},
+                {"info", server.GetUserInfoCommand},
+                {"verify", server.VerifyUserCommand}
+            };
+        }
 
         private static void Stop(string[] args)
         {

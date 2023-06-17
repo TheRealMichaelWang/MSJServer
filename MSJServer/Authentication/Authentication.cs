@@ -111,6 +111,7 @@ namespace MSJServer
             content = content.Replace("{CREATIONDATE}", account.CreationDate.ToString());
             content = content.Replace("{PERMISSIONS}", PermissionsHelper.GetDescription(account.Permissions));
             content = content.Replace("{ISONLINE}", account.IsLoggedIn ? "Yes" : "No");
+            content = content.Replace("{ISVERIF}", account.IsVerified ? "Yes" : "No");
             Respond202(context, content);
         }
 

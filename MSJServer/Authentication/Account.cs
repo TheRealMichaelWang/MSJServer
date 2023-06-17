@@ -28,22 +28,42 @@ namespace MSJServer
             using (BinaryReader reader = new BinaryReader(stream))
                 count = reader.ReadInt32();
 
+            Dictionary<string, Account> loadedAccounts = new Dictionary<string, Account>(count);
             using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.Read))
             using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8))
             {
-                Dictionary<string, Account> loadedAccounts = new Dictionary<string, Account>(count);
                 for (int i = 0; i < count; i++)
                 {
                     long position = stream.Position;
-                    Account loadedAccount = new Account(reader);
+                    Account loadedAccount = Account.FromReader(reader);
                     loadedAccounts.Add(loadedAccount.Name, loadedAccount);
                     loadedAccounts.Add(loadedAccount.Email, loadedAccount);
                     accountOffsets.Add(loadedAccount, position);
                     accountSizes.Add(loadedAccount, stream.Position - position);
                 }
                 accountSize = stream.Position;
-                return loadedAccounts;
             }
+
+            if (Account.DatabaseVersion < Account.LatestDatabaseVersion)
+            {
+                //reformat and upgrade database format
+                using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.Write))
+                using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
+                {
+                    foreach(Account loadedAccount in accountSizes.Keys)
+                    {
+                        long position = stream.Position;
+                        loadedAccount.WriteTo(writer);
+                        accountOffsets[loadedAccount] = position;
+                        accountSizes[loadedAccount] = stream.Position - position;
+                    }
+                    accountSize = stream.Position;
+                }
+
+                //update database version
+                Account.DatabaseVersion = Account.LatestDatabaseVersion;
+            }
+            return loadedAccounts;
         }
 
         private static void RegisterAccount(Account account)
@@ -74,19 +94,24 @@ namespace MSJServer
             using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.ReadWrite))
             {
                 long position = accountOffsets[account];
+                long oldSize = accountSizes[account];
                 
                 //copy data from afer account
-                byte[] data = new byte[accountSize - (position + accountSizes[account])];
-                stream.Position = position + accountSizes[account];
+                byte[] data = new byte[accountSize - (position + oldSize)];
+                stream.Position = position + oldSize;
                 stream.Read(data, 0, data.Length);
 
-                accountSizes.Remove(account);
                 stream.Position = position;
                 using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
                 {
                     account.WriteTo(writer);
-                    accountSizes.Add(account, stream.Position - position);
-                    writer.Write(data);
+                    long newSize = stream.Position - position;
+
+                    if (newSize != oldSize)
+                    {
+                        accountSizes[account] = newSize;
+                        writer.Write(data);
+                    }
                 }
             }
         }
@@ -98,7 +123,7 @@ namespace MSJServer
             if (accounts.ContainsKey(username) || accounts.ContainsKey(email))
                 return null;
 
-            Account account = new Account(username, password, email, Permissions.Contributor, DateTime.Now);
+            Account account = new Account(username, password, email, Permissions.Contributor, DateTime.Now, false);
             accounts.Add(username, account);
             accounts.Add(email, account);
             RegisterAccount(account);
@@ -108,31 +133,57 @@ namespace MSJServer
 
     public class Account
     {
+        public static int LatestDatabaseVersion => 1;
+
+        public static int DatabaseVersion
+        {
+            get
+            {
+                if (File.Exists("ACCOUNTDB_VER.txt"))
+                    return int.Parse(File.ReadAllText("ACCOUNTDB_VER.txt"));
+                else
+                {
+                    File.Create("ACCOUNTDB_VER.txt").Close();
+                    File.WriteAllText("ACCOUNTDB_VER.txt", "0");
+                    return 0;
+                }
+            }
+            set => File.WriteAllText("ACCOUNTDB_VER.txt", value.ToString());
+        }
+
+        public static Account FromReader(BinaryReader reader)
+        {
+            if(DatabaseVersion == LatestDatabaseVersion)
+            {
+                return new Account(reader.ReadString(), reader.ReadString(), reader.ReadString(), PermissionsHelper.FromByte(reader.ReadByte()), new DateTime(reader.ReadInt64()), reader.ReadBoolean());
+            }
+
+            return new Account(reader.ReadString(), reader.ReadString(), reader.ReadString(), PermissionsHelper.FromByte(reader.ReadByte()), new DateTime(reader.ReadInt64()), false);
+        }
+
         public string Name { get; private set; }
         public DateTime CreationDate { get; private set; }
 
         private string _password;
         private string _email;
         private Permissions _permissions;
+        private bool _verified;
         public string Password { get => _password; set { _password = value; Server.ModifyAccount(this); } }
         public string Email { get => _email; set { _email = value; Server.ModifyAccount(this); } }
         public Permissions Permissions { get => _permissions; set { _permissions = value; Server.ModifyAccount(this); } }
+        public bool IsVerified { get => _verified; set { _verified = value; Server.ModifyAccount(this); } }
 
         public bool IsLoggedIn { get; set; }
 
-        public Account(string name, string password, string email, Permissions permissions, DateTime creationDate)
+        public Account(string name, string password, string email, Permissions permissions, DateTime creationDate, bool isVerified)
         {
             Name = name;
             _password = password;
             _email = email;
             _permissions = permissions;
+            _verified = isVerified;
             IsLoggedIn = false;
             CreationDate = creationDate;
-        }
-
-        public Account(BinaryReader reader) : this(reader.ReadString(), reader.ReadString(), reader.ReadString(), PermissionsHelper.FromByte(reader.ReadByte()), new DateTime(reader.ReadInt64()))
-        {
-
         }
 
         public void WriteTo(BinaryWriter writer)
@@ -142,6 +193,7 @@ namespace MSJServer
             writer.Write(Email);
             writer.Write(PermissionsHelper.ToByte(Permissions));
             writer.Write(CreationDate.Ticks);
+            writer.Write(IsVerified);
         }
     }
 }
