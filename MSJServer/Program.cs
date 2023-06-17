@@ -24,6 +24,14 @@
             }
         }
 
+        public void RemoveUserCommand(string[] args)
+        {
+            if (RemoveAccount(args[1]))
+                Console.WriteLine($"{args[1]} succesfully removed.");
+            else
+                Console.WriteLine($"Couldn't remove user {args[1]}.");
+        }
+
         public void SetPermsCommand(string[] args)
         {
             if (!accounts.ContainsKey(args[1]))
@@ -35,6 +43,8 @@
             Account account = accounts[args[1]];
             if (!SetAccountPerms(account, args[2]))
                 Console.WriteLine($"Unrecognized permission level {args[2]}.");
+            else
+                Console.WriteLine($"{account.Name}'s permission sucesfully set.");
         }
 
         public void VerifyUserCommand(string[] args)
@@ -47,6 +57,8 @@
 
             Account account = accounts[args[1]];
             account.IsVerified = true;
+
+            Console.WriteLine($"Succesfully verified {account.Name}.");
         }
 
         public void ListUsersCommand(string[] args)
@@ -80,7 +92,14 @@
             }
 
             Account account = accounts[args[1]];
-            EmailNotifier.Notify(account.Email, args.Length >= 4 ? args[3] : "MSJ Console-Invoked Notification", args[2]);
+
+            if (!account.IsVerified)
+                Console.WriteLine("The user isn't verified, so their email might not work.");
+
+            if (EmailNotifier.Notify(account.Email, args.Length >= 4 ? args[3] : "MSJ Console-Invoked Notification", args[2]))
+                Console.WriteLine($"Succesfully notified {account.Name}.");
+            else
+                Console.WriteLine($"An error occured while ending the notification email to {account.Name}.");
         }
     }
 
@@ -88,6 +107,8 @@
     {
         //indicates whether the program is running in a production environment or not
         public static bool IsProduction { get; private set; }
+        
+        public static DateTime StartupTime { get; private set; }
 
         private static Server server;
         private static bool stop = false;
@@ -95,7 +116,18 @@
 
         static Program()
         {
-            server = new Server();
+            static bool validateAccount(Account account)
+            {
+                //accounts that are verified, or were created before 6/17/23 are OK
+                //new accounts created afterwards must be verified within 7 days.
+
+                if (account.IsVerified || account.CreationDate < new DateTime(2023, 6, 17))
+                    return true;
+
+                return StartupTime.Subtract(account.CreationDate).Days < 7;
+            }
+
+            server = new Server(validateAccount);
             commands = new()
             {
                 {"stop", Stop},
@@ -103,7 +135,8 @@
                 {"users", server.ListUsersCommand},
                 {"notify", server.NotifyUserCommand},
                 {"info", server.GetUserInfoCommand},
-                {"verify", server.VerifyUserCommand}
+                {"verify", server.VerifyUserCommand},
+                {"remove", server.RemoveUserCommand}
             };
         }
 
@@ -115,6 +148,7 @@
 
         public static void Main(string[] args)
         {
+            StartupTime = DateTime.Now;
             IsProduction = args.Contains("--prod") || !args.Contains("--test");
 
             if (IsProduction)

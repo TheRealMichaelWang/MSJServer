@@ -4,11 +4,14 @@ namespace MSJServer
 {
     partial class Server
     {
+        public delegate bool AccountValidator(Account account);
+
         private static Dictionary<Account, long> accountOffsets = new Dictionary<Account, long>();
         private static Dictionary<Account, long> accountSizes = new Dictionary<Account, long>();
         private static long accountSize;
 
-        private static Dictionary<string, Account> LoadAccounts()
+        //accounts that aren't validated by the validator are deleted
+        private static Dictionary<string, Account> LoadAccounts(AccountValidator validator)
         {
             accountOffsets.Clear();
             accountSizes.Clear();
@@ -28,6 +31,7 @@ namespace MSJServer
             using (BinaryReader reader = new BinaryReader(stream))
                 count = reader.ReadInt32();
 
+            bool invalidAccountsDetected = false;
             Dictionary<string, Account> loadedAccounts = new Dictionary<string, Account>(count);
             using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.Read))
             using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8))
@@ -36,32 +40,44 @@ namespace MSJServer
                 {
                     long position = stream.Position;
                     Account loadedAccount = Account.FromReader(reader);
-                    loadedAccounts.Add(loadedAccount.Name, loadedAccount);
-                    loadedAccounts.Add(loadedAccount.Email, loadedAccount);
-                    accountOffsets.Add(loadedAccount, position);
-                    accountSizes.Add(loadedAccount, stream.Position - position);
+
+                    if (validator(loadedAccount))
+                    {
+                        loadedAccounts.Add(loadedAccount.Name, loadedAccount);
+                        loadedAccounts.Add(loadedAccount.Email, loadedAccount);
+                        accountOffsets.Add(loadedAccount, position);
+                        accountSizes.Add(loadedAccount, stream.Position - position);
+                    }
+                    else
+                        invalidAccountsDetected = true;
                 }
                 accountSize = stream.Position;
             }
 
-            if (Account.DatabaseVersion < Account.LatestDatabaseVersion)
+            if (Account.DatabaseVersion < Account.LatestDatabaseVersion || invalidAccountsDetected)
             {
-                //reformat and upgrade database format
+                //reformat and upgrade database format/overwrite database
                 using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.Write))
                 using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
                 {
-                    foreach(Account loadedAccount in accountSizes.Keys)
+                    foreach (Account loadedAccount in accountSizes.Keys)
                     {
-                        long position = stream.Position;
-                        loadedAccount.WriteTo(writer);
-                        accountOffsets[loadedAccount] = position;
-                        accountSizes[loadedAccount] = stream.Position - position;
+                        if (validator(loadedAccount))
+                        {
+                            long position = stream.Position;
+                            loadedAccount.WriteTo(writer);
+                            accountOffsets[loadedAccount] = position;
+                            accountSizes[loadedAccount] = stream.Position - position;
+                        }
                     }
                     accountSize = stream.Position;
                 }
 
-                //update database version
-                Account.DatabaseVersion = Account.LatestDatabaseVersion;
+                if (!invalidAccountsDetected)
+                {
+                    //update database version
+                    Account.DatabaseVersion = Account.LatestDatabaseVersion;
+                }
             }
             return loadedAccounts;
         }
@@ -86,6 +102,39 @@ namespace MSJServer
                 account.WriteTo(writer);
                 accountSizes.Add(account, stream.Position - oldPosition);
                 accountSize = stream.Position;
+            }
+        }
+
+        public static void RemoveAccount(Account account)
+        {
+            using (FileStream stream = new FileStream("accounts.size", FileMode.Open, FileAccess.ReadWrite))
+            {
+                int count;
+                using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8, true))
+                    count = reader.ReadInt32();
+                stream.Position = 0;
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                    writer.Write(count - 1);
+            }
+            using (FileStream stream = new FileStream("accounts.db", FileMode.Open, FileAccess.ReadWrite))
+            {
+                long position = accountOffsets[account];
+                long oldSize = accountSizes[account];
+
+                //copy data from afer account
+                byte[] data = new byte[accountSize - (position + oldSize)];
+                stream.Position = position + oldSize;
+                stream.Read(data, 0, data.Length);
+
+                using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
+                {
+                    stream.Position = position;
+                    writer.Write(data);
+                    accountSize = stream.Position;
+                }
+
+                accountOffsets.Remove(account);
+                accountSizes.Remove(account);
             }
         }
 
@@ -128,6 +177,23 @@ namespace MSJServer
             accounts.Add(email, account);
             RegisterAccount(account);
             return account;
+        }
+
+        public bool RemoveAccount(string username)
+        {
+            if (!accounts.ContainsKey(username))
+                return false;
+
+            Account account = accounts[username];
+            if (account.Permissions >= Permissions.Admin)
+                return false;
+
+            RemoveAccount(account);
+
+            accounts.Remove(account.Name);
+            accounts.Remove(account.Email);
+
+            return true;
         }
     }
 

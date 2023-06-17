@@ -6,9 +6,9 @@ namespace MSJServer
 {
     partial class Server : HTTPServer
     {
-        public Server()
+        public Server(AccountValidator accountValidator)
         {
-            accounts = LoadAccounts();
+            accounts = LoadAccounts(accountValidator);
 
             POST["/login"] = HandleLogin;
             POST["/signup"] = HandleSignup;
