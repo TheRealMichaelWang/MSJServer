@@ -37,10 +37,17 @@ namespace MSJServer
             Cookie session = new Cookie("session", sessionId.ToString());
             session.Expires = DateTime.Now.AddMinutes(15); //each session lasts for 16 minutes
             context.Response.SetCookie(session);
-            Redirect(context, "index");
-            
+
             lock (sessions)
+            {
                 sessions.Add(sessionId, new(account, session.Expires));
+            }
+
+            if (account.IsVerified)
+                Redirect(context, "index");
+            else
+                Redirect(context, "verify_landing");
+
             return sessionId;
         }
 

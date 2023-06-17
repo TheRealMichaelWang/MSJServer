@@ -12,6 +12,8 @@ namespace MSJServer
 
             POST["/login"] = HandleLogin;
             POST["/signup"] = HandleSignup;
+            GET["/verify_landing"] = HandleVerifyLanding;
+            GET["/validate_code"] = HandleValidateVerificationCode;
             GET["/userinfo"] = HandleGetUserInfo;
             GET["/setperms"] = HandleSetUserPermission;
             GET["/article"] = HandleReadArticle;
@@ -29,19 +31,28 @@ namespace MSJServer
                 while (true)
                 {
                     DateTime scanTime = DateTime.Now;
-                    List<Guid> sessionsToRemove = new();
+                    List<KeyValuePair<Guid, Tuple < Account, DateTime>>> sessionsToRemove = new();
                     lock (sessions)
                     {
                         foreach (var session in sessions)
                         {
                             if (scanTime > session.Value.Item2)
                             {
-                                sessionsToRemove.Add(session.Key);
+                                sessionsToRemove.Add(session);
                                 session.Value.Item1.IsLoggedIn = false;
                             }
                         }
+
                         foreach (var session in sessionsToRemove)
-                            sessions.Remove(session);
+                        {
+                            sessions.Remove(session.Key);
+
+                            lock (activeVerificationCodes)
+                            {
+                                if (activeVerificationCodes.ContainsKey(session.Value.Item1))
+                                    activeVerificationCodes.Remove(session.Value.Item1);
+                            }
+                        }
                     }
                 }
             });

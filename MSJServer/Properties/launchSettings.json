@@ -1,8 +1,7 @@
 {
   "profiles": {
     "MSJServer": {
-      "commandName": "Project",
-      "commandLineArgs": "--test"
+      "commandName": "Project"
     }
   }
 }

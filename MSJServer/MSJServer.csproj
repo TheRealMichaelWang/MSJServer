@@ -13,6 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="templates\verify_landing.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="static\login.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

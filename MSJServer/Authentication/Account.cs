@@ -169,7 +169,7 @@ namespace MSJServer
         private Permissions _permissions;
         private bool _verified;
         public string Password { get => _password; set { _password = value; Server.ModifyAccount(this); } }
-        public string Email { get => _email; set { _email = value; Server.ModifyAccount(this); } }
+        public string Email { get => _email; set { _email = value; _verified = false; Server.ModifyAccount(this); } }
         public Permissions Permissions { get => _permissions; set { _permissions = value; Server.ModifyAccount(this); } }
         public bool IsVerified { get => _verified; set { _verified = value; Server.ModifyAccount(this); } }
 
