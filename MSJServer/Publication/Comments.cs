@@ -78,7 +78,7 @@ namespace MSJServer
             writer.Write(Created.Ticks);
         }
 
-        public override string ToString() => $"<div><a href=\"/userinfo?username={Sender}\">{Sender}</a><a class=\"text-muted\"> • {Created.ToShortTimeString()}</a><a><span class=\"badge badge-primary mx-1\">{(RevisionRequested ? "Revision Requested" : string.Empty)}</span></a></div>{Content}<hr>";
+        public string ToHTML() => $"<div><a href=\"/userinfo?username={Sender}\">{Sender}</a><a class=\"text-muted\"> • {Created.ToShortTimeString()}</a><a><span class=\"badge badge-primary mx-1\">{(RevisionRequested ? "Revision Requested" : string.Empty)}</span></a></div>{Content}<hr>";
     }
 
     partial class Server
@@ -94,6 +94,7 @@ namespace MSJServer
                 RespondError(context, $"Failed to Make Comment", $"Are you sure article {id} exists?");
                 return;
             }
+
             Article article = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
             if (account == null)
@@ -104,6 +105,11 @@ namespace MSJServer
             else if(requestRevision && account.Permissions < Permissions.Editor)
             {
                 RespondError(context, "Failed to Make Comment", "Only editors can request revisions.");
+                return;
+            }
+            else if (!account.ShouldVerify)
+            {
+                RedirectToVerify(context, "Verify you account before posting comments.");
                 return;
             }
 

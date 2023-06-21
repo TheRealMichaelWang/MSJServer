@@ -4,11 +4,16 @@ using System.Text.RegularExpressions;
 
 namespace MSJServer
 {
+    partial class Session
+    {
+        public void ExtendSession() => TimeOutTime = DateTime.Now.AddMinutes(15);
+    }
+
     partial class Server
     {
-        private Dictionary<Guid, Tuple<Account, DateTime>> sessions = new();
+        private Dictionary<Guid, Session> sessions = new();
 
-        private Account? GetLoggedInAccount(HttpListenerContext context)
+        private Session? GetCurrentSession(HttpListenerContext context)
         {
             Cookie? session = context.Request.Cookies["session"];
             if (session == null)
@@ -19,12 +24,15 @@ namespace MSJServer
             {
                 if (!sessions.ContainsKey(id))
                     return null;
-                sessions[id] = new(sessions[id].Item1, DateTime.Now.AddMinutes(15));
-                return sessions[id].Item1;
+
+                sessions[id].ExtendSession();
+                return sessions[id];
             }
         }
 
-        private Guid? LogAccountIn(HttpListenerContext context, Account account)
+        private Account? GetLoggedInAccount(HttpListenerContext context) => GetCurrentSession(context)?.LoggedInAccount;
+
+        private Session? LogAccountIn(HttpListenerContext context, Account account)
         {
             if (account.IsLoggedIn == true)
             {
@@ -32,27 +40,27 @@ namespace MSJServer
                 return null;
             }
 
-            Guid sessionId = Guid.NewGuid();
-            account.IsLoggedIn = true;
-            Cookie session = new Cookie("session", sessionId.ToString());
-            session.Expires = DateTime.Now.AddMinutes(15); //each session lasts for 16 minutes
-            context.Response.SetCookie(session);
-
+            Session session = new Session(account);
             lock (sessions)
             {
-                sessions.Add(sessionId, new(account, session.Expires));
+                sessions.Add(session.SessionID, session);
             }
 
-            if (account.IsVerified)
-                Redirect(context, "index");
-            else
-                Redirect(context, "verify_landing");
+            context.Response.SetCookie(new Cookie("session", session.SessionID.ToString()));
 
-            return sessionId;
+            Redirect(context, "index");
+
+            return session;
         }
 
         private void HandleLogin(HttpListenerContext context)
         {
+            if (GetLoggedInAccount(context) != null)
+            {
+                RespondError(context, $"You've already logged in. Log out before logging in with an alt-account.");
+                return;
+            }
+
             Dictionary<string, string> loginInfo = context.Request.GetPOSTData();
 
             if (!accounts.ContainsKey(loginInfo["username"]))
@@ -66,11 +74,39 @@ namespace MSJServer
                 RespondError(context, "Failed to Login", $"Wrong password recieved.");
                 return;
             }
+
+            if (!loggedOn.IsVerified)
+            {
+                Notification.MakeNotification(loggedOn, "You still haven't verified your account!", $"Seriously, if you don't verify your account (and identity) by {loggedOn.CreationDate.AddDays(7).ToShortDateString()}, we'll delete your account!", Notification.Serverity.MustResolve, "verify_landing");
+            }
             LogAccountIn(context, loggedOn);
+        }
+
+        private void HandleLogout(HttpListenerContext context)
+        {
+            Session? session = GetCurrentSession(context);
+
+            if(session == null)
+            {
+                RespondError(context, "Failed to log out.", "You must log in in order to log out.");
+                return;
+            }
+
+            lock (sessionsToEnd)
+            {
+                sessionsToEnd.Add(session);
+            }
+            Redirect(context, "index");
         }
 
         private void HandleSignup(HttpListenerContext context)
         {
+            if (GetLoggedInAccount(context) != null)
+            {
+                RespondError(context, $"You've already logged in. Log out before making an alt-account.");
+                return;
+            }
+
             Dictionary<string, string> signupInfo = context.Request.GetPOSTData();
 
             if (!Regex.IsMatch(signupInfo["username"], "[a-zA-Z0-9]{8,25}"))
@@ -87,9 +123,11 @@ namespace MSJServer
             Account? newAccount = RegisterAccount(signupInfo["username"], signupInfo["password"], signupInfo["email"]);
             if(newAccount == null)
             {
-                RespondError(context, "Failed to Register New Account", $"Username {signupInfo["username"]} already taken.");
+                RespondError(context, "Failed to Register New Account", $"Username {signupInfo["username"]} has already taken or email {signupInfo["email"]} is already in use.", "If you beleive your email to be in use without your authorization, please contact an admin, or wait 7 days for the offending account to be automatically removed.");
                 return;
             }
+
+            Notification.MakeNotification(newAccount, "Welcome to the MSJ!", "We're glad you're here to join us. Verify your account as soon as possible within the next 7 days(or else...)!", Notification.Serverity.ShouldResolve, "verify_landing", false);
             LogAccountIn(context, newAccount);
         }
 
@@ -126,12 +164,6 @@ namespace MSJServer
         {
             Dictionary<string, string> permissionsInfo = context.Request.GetGETData();
 
-            if (!accounts.ContainsKey(permissionsInfo["username"]))
-            {
-                RespondError(context, "Couldn't Set User Permissions", $"User {permissionsInfo["username"]} doesn't exist.");
-                return;
-            }
-            Account account = accounts[permissionsInfo["username"]];
 
             Account? loggedInAccount = GetLoggedInAccount(context);
             if(loggedInAccount != null && loggedInAccount.Permissions != Permissions.Admin)
@@ -139,7 +171,15 @@ namespace MSJServer
                 RespondError(context, "Couldn't Set User Permissions", "You must be logged in as an administrator to change user permissions.");
                 return;
             }
-            else if(loggedInAccount == account)
+
+            if (!accounts.ContainsKey(permissionsInfo["username"]))
+            {
+                RespondError(context, "Couldn't Set User Permissions", $"User {permissionsInfo["username"]} doesn't exist.");
+                return;
+            }
+            Account account = accounts[permissionsInfo["username"]];
+            
+            if(loggedInAccount == account)
             {
                 RespondError(context, "Couldn't Set User Permissions", "Potential conflict of interest; you cannot change your own permissions.");
                 return;

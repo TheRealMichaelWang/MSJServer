@@ -33,6 +33,9 @@ namespace MSJServer
             return account;
         }
 
+        private void RedirectToVerify(HttpListenerContext context, string err) =>
+                Redirect(context, $"/verify_landing?generr=\"{err}\"");
+
         private void HandleVerifyLanding(HttpListenerContext context)
         {
             Account? account = CheckAccount(context);
@@ -58,6 +61,8 @@ namespace MSJServer
             }
             else if (data.ContainsKey("verif_code"))
                 content = content.Replace("{BANNERMSG}", $"<div class=\"alert alert-danger\">The verification code provided, {data["verif_code"]} is invalid.</div>");
+            else if (data.ContainsKey("generr"))
+                content = content.Replace("{BANNERMSG}", $"<div class=\"alert alert-danger\">{data["generr"]}</div>");
             else
                 content = content.Replace("{BANNERMSG}", string.Empty);
 

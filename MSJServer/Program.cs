@@ -151,13 +151,15 @@
             StartupTime = DateTime.Now;
             IsProduction = args.Contains("--prod") || !args.Contains("--test");
 
+            if (!Directory.Exists("articles"))
+                Directory.CreateDirectory("articles");
+            if (!Directory.Exists("comments"))
+                Directory.CreateDirectory("comments");
+            if (!Directory.Exists("users"))
+                Directory.CreateDirectory("users");
+
             if (IsProduction)
             {
-                if (!Directory.Exists("articles"))
-                    Directory.CreateDirectory("articles");
-                if (!Directory.Exists("comments"))
-                    Directory.CreateDirectory("comments");
-
                 Console.WriteLine("Starting...");
                 server.Start();
             }

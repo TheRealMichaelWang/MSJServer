@@ -4,14 +4,37 @@ using System.Text;
 
 namespace MSJServer
 {
+    public partial class Session
+    {
+        public Guid SessionID { get;private set; } //unique session identifier
+        public Account LoggedInAccount { get; private set; } //account associated with session
+        public DateTime TimeOutTime { get; private set; } //time representing when the session will timeout
+
+        public bool TimedOut => DateTime.Now > TimeOutTime;
+
+        public Session(Account loggedInAccount)
+        {
+            LoggedInAccount = loggedInAccount;
+            TimeOutTime = DateTime.Now.AddMinutes(15);
+            SessionID = Guid.NewGuid();
+
+            loggedInAccount.IsLoggedIn = true;
+        }
+
+        public void End() => LoggedInAccount.IsLoggedIn = false;
+    }
+
     partial class Server : HTTPServer
     {
+        private List<Session> sessionsToEnd = new(10);
+
         public Server(AccountValidator accountValidator)
         {
             accounts = LoadAccounts(accountValidator);
 
             POST["/login"] = HandleLogin;
             POST["/signup"] = HandleSignup;
+            GET["/logout"] = HandleLogout;
             GET["/verify_landing"] = HandleVerifyLanding;
             GET["/validate_code"] = HandleValidateVerificationCode;
             GET["/userinfo"] = HandleGetUserInfo;
@@ -23,6 +46,7 @@ namespace MSJServer
             GET["/editor"] = HandleEditorRequest;
             POST["/comment"] = HandleCommentRequest;
             GET["/index"] = HandleFrontPageAccess;
+            GET["/resolve_notif"] = HandleResolveNotification;
             ServeStatic(new DirectoryInfo("static"));
 
             base.initialized = true;
@@ -30,30 +54,29 @@ namespace MSJServer
             {
                 while (true)
                 {
-                    DateTime scanTime = DateTime.Now;
-                    List<KeyValuePair<Guid, Tuple < Account, DateTime>>> sessionsToRemove = new();
-                    lock (sessions)
+                    lock (sessions) //lock (sessionsToEnd)
                     {
-                        foreach (var session in sessions)
+                        foreach (Session session in sessions.Values)
                         {
-                            if (scanTime > session.Value.Item2)
-                            {
-                                sessionsToRemove.Add(session);
-                                session.Value.Item1.IsLoggedIn = false;
-                            }
+                            if (session.TimedOut)
+                                sessionsToEnd.Add(session);
                         }
 
-                        foreach (var session in sessionsToRemove)
+                        foreach(Session session in sessionsToEnd)
                         {
-                            sessions.Remove(session.Key);
+                            sessions.Remove(session.SessionID);
 
                             lock (activeVerificationCodes)
                             {
-                                if (activeVerificationCodes.ContainsKey(session.Value.Item1))
-                                    activeVerificationCodes.Remove(session.Value.Item1);
+                                if (activeVerificationCodes.ContainsKey(session.LoggedInAccount))
+                                    activeVerificationCodes.Remove(session.LoggedInAccount);
                             }
+
+                            session.End();
                         }
-                    }
+
+                        sessionsToEnd.Clear();
+                    };
                 }
             });
         }

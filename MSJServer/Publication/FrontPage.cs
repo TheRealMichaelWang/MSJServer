@@ -17,22 +17,36 @@ namespace MSJServer
                 content = File.ReadAllText("templates/index.html");
             else
             {
-                if (!account.IsVerified)
-                {
-                    Redirect(context, "verify_landing");
-                    return;
-                }
-
+                Notification[] notifications = Notification.GetNotifications(account, true);
+          
                 content = File.ReadAllText("templates/index_signin.html");
                 content = content.Replace("{USERNAME}", account.Name);
                 isEditor = (account.Permissions >= Permissions.Editor);
+
+                StringBuilder notificationsHTML = new StringBuilder();
+                foreach(Notification notification in notifications)
+                {
+                    notificationsHTML.Append(notification.ToHTML());
+                    notificationsHTML.Append("<br>");
+
+                    notification.Read = true;
+                }
+                content = content.Replace("{NOTIFS}", notificationsHTML.ToString());
             }
+
             content = content.Replace("{EXTFLAGS}", queryInfo.ContainsKey("unpub") ? "&unpub=yes" : string.Empty);
             content = content.Replace("{DATE}", DateOnly.FromDateTime(DateTime.Now).ToLongDateString());
             content = content.Replace("{INVFLAGS}", queryInfo.ContainsKey("unpub") ? string.Empty : "&unpub=yes");
             content = content.Replace("{SECTION}", queryInfo.ContainsKey("unpub") ? "Published Works" : "Unpublished Works");
+            
+            int page = 1;
+            if (queryInfo.ContainsKey("page") && (!int.TryParse(queryInfo["page"], out page) || page < 1))
+            {
+                RespondError(context, $"Invalid page number {queryInfo["page"]} given.");
+                return;
+            }
 
-            Guid[] publishedArticles = Article.GetPublishedArticles(queryInfo.ContainsKey("unpub"));
+            Guid[] publishedArticles = Article.GetPublishedArticles(queryInfo.ContainsKey("unpub"), page, 10);
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < publishedArticles.Length; i++)
             {

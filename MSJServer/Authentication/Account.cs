@@ -103,6 +103,8 @@ namespace MSJServer
                 accountSizes.Add(account, stream.Position - oldPosition);
                 accountSize = stream.Position;
             }
+
+            Directory.CreateDirectory(Path.Combine("users", account.Name));
         }
 
         public static void RemoveAccount(Account account)
@@ -136,6 +138,8 @@ namespace MSJServer
                 accountOffsets.Remove(account);
                 accountSizes.Remove(account);
             }
+
+            Directory.Delete(Path.Combine("users", account.Name), true);
         }
 
         public static void ModifyAccount(Account account)
@@ -240,6 +244,7 @@ namespace MSJServer
         public bool IsVerified { get => _verified; set { _verified = value; Server.ModifyAccount(this); } }
 
         public bool IsLoggedIn { get; set; }
+        public bool ShouldVerify => Permissions <= Permissions.Editor && !IsVerified;
 
         public Account(string name, string password, string email, Permissions permissions, DateTime creationDate, bool isVerified)
         {

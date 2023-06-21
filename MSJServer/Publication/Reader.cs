@@ -27,7 +27,8 @@ namespace MSJServer
             content = content.Replace("{UPLOADTIME}", article.UploadTime.ToLongDateString());
             content = content.Replace("{BODY}", article.Body);
 
-            content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published)));
+            content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published).Select((comment) => comment.ToHTML())));
+
             if (article.PublishStatus == PublishStatus.UnderReview)
                 content = content.Replace("{PUBLISHSTAT}", "<div class=\"alert alert-warning\">This work is currently under review.</div>");
             else if (article.PublishStatus == PublishStatus.Rejected)
@@ -81,6 +82,10 @@ namespace MSJServer
                 RespondError(context, "Failed to Upload Article", "You must be logged in to upload an article.");
                 return;
             }
+            else if (account.ShouldVerify)
+            {
+                RedirectToVerify(context, "Verify your account before uploading articles.");
+            }
 
             Article article = new Article(Guid.NewGuid(), articleInfo["title"], articleInfo["body"], account.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Guid.Empty, Guid.Empty);
             article.Save();
@@ -96,11 +101,17 @@ namespace MSJServer
                 RespondError(context, $"Failed to Revise Article.", $"Are you sure article {id} exists?");
                 return;
             }
+
             Article oldArticle = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
             if (account == null)
             {
                 RespondError(context, "Failed to Revise Article.", "You must be logged in to revise an article.");
+                return;
+            }
+            else if (account.ShouldVerify)
+            {
+                RedirectToVerify(context, "Verify your account before revising an article.");
                 return;
             }
 
@@ -110,6 +121,7 @@ namespace MSJServer
                 RespondError(context, "Failed to Revise Article.", "You are not the author of the article, nor are you an editor.", "This article has already been published, or revised by the author.");
                 return;
             }
+
             newArticle.Save();
             Redirect(context, $"/article?id={newArticle.Id}");
         }
