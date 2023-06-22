@@ -244,7 +244,7 @@ namespace MSJServer
         public bool IsVerified { get => _verified; set { _verified = value; Server.ModifyAccount(this); } }
 
         public bool IsLoggedIn { get; set; }
-        public bool ShouldVerify => Permissions <= Permissions.Editor && !IsVerified;
+        public bool ShouldVerify => (Permissions <= Permissions.Editor && !IsVerified);
 
         public Account(string name, string password, string email, Permissions permissions, DateTime creationDate, bool isVerified)
         {

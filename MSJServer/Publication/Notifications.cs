@@ -71,6 +71,8 @@ namespace MSJServer
 
     public class Notification
     {
+        private const int BodyCharacterLimit = 115;
+
         public enum Serverity : byte
         {
             MustResolve = 2,
@@ -120,15 +122,50 @@ namespace MSJServer
             }
         }
 
-        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, string resolveAction = "", bool deleteOnRead=true)
+        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, string resolveAction = "", bool deleteOnResolve=true)
         {
             EnsureNotificationsDir(receiver);
 
-            Notification notification = new Notification(DateTime.Now, subject, body, resolveAction, false, serverity, deleteOnRead, Guid.NewGuid(), receiver);
+            Notification notification = new Notification(DateTime.Now, subject, body, resolveAction, false, serverity, deleteOnResolve, Guid.NewGuid(), receiver);
             notification.Save();
 
             if (receiver.IsVerified)
                 EmailNotifier.Notify(receiver.Email, subject, body);
+        }
+
+        public static void MakeNotificationFromTemplate(Account receiver, string templateFile, params (string, string)[] textParams)
+        {
+            string src = File.ReadAllText($"templates/{templateFile}");
+            src = src.Replace("{RECV}", receiver.Name);
+            foreach ((string, string) textParam in textParams)
+                src = src.Replace($"{{{textParam.Item1}}}", textParam.Item2);
+
+            using(StringReader reader = new StringReader(src))
+            {
+                Dictionary<string, string> templateInfo = new Dictionary<string, string>();
+
+                string? line;
+                while((line = reader.ReadLine()) != null && (line.Contains(':') && line != string.Empty))
+                {
+                    if (line == string.Empty)
+                        continue;
+
+                    string[] parts = line.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length != 2)
+                        throw new FormatException($"In template file {templateFile}, line {line} is invalid.");
+
+                    templateInfo.Add(parts[0].Trim(), parts[1].Trim());
+                }
+
+                try
+                {
+                    MakeNotification(receiver, templateInfo["subject"], reader.ReadToEnd(), (Serverity)byte.Parse(templateInfo["warning"]), templateInfo.ContainsKey("resolve") ? templateInfo["resolve"] : string.Empty, templateInfo.ContainsKey("delete") ? bool.Parse(templateInfo["delete"]) : true);
+                }
+                catch (KeyNotFoundException e)
+                {
+                    throw new FormatException($"In template file {templateFile}, a mandatory parameter is missing ({e.Message}).");
+                }
+            }
         }
 
         public DateTime Time { get; private set; }
@@ -213,7 +250,11 @@ namespace MSJServer
             htmlBuilder.Append("\"><b>");
             htmlBuilder.Append(Subject);
             htmlBuilder.Append("</b><br>");
-            htmlBuilder.Append(Body);
+
+            if (Body.Length > BodyCharacterLimit)
+                htmlBuilder.Append(Body.Substring(0, BodyCharacterLimit).Replace("\r\n", "<br>").Replace("\n", "<br>") + "...");
+            else
+                htmlBuilder.Append(Body.Replace("\r\n", "<br>").Replace("\n", "<br>"));
 
             if(ResolveAction != string.Empty)
             {

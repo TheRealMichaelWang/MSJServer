@@ -107,13 +107,21 @@ namespace MSJServer
                 RespondError(context, "Failed to Make Comment", "Only editors can request revisions.");
                 return;
             }
-            else if (!account.ShouldVerify)
+            else if (account.ShouldVerify)
             {
                 RedirectToVerify(context, "Verify you account before posting comments.");
                 return;
             }
 
             article.MakeComment(new Comment(account.Name, commentInfo["msg"], requestRevision, DateTime.Now));
+            if (accounts.ContainsKey(article.Author))
+            {
+                Account author = accounts[article.Author];
+                if (requestRevision)
+                    Notification.MakeNotification(author, $"Revision Requested on {article.Title}.", $"An editor, {account.Name}, has requested that you revise your article, {article.Title}. Here are {account.Name}'s comments:\n{commentInfo["msg"]}", Notification.Serverity.ShouldResolve, $"/article?id={article.Id}");
+                else
+                    Notification.MakeNotification(author, $"New Comment on {article.Title} from {account.Name}", commentInfo["msg"], Notification.Serverity.CanIgnore, $"/article?id={article.Id}");
+            }
             Redirect(context, $"/article?id={id}");
         }
     }

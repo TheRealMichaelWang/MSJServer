@@ -164,9 +164,8 @@ namespace MSJServer
         {
             Dictionary<string, string> permissionsInfo = context.Request.GetGETData();
 
-
             Account? loggedInAccount = GetLoggedInAccount(context);
-            if(loggedInAccount != null && loggedInAccount.Permissions != Permissions.Admin)
+            if(loggedInAccount == null || loggedInAccount.Permissions != Permissions.Admin)
             {
                 RespondError(context, "Couldn't Set User Permissions", "You must be logged in as an administrator to change user permissions.");
                 return;
@@ -190,6 +189,8 @@ namespace MSJServer
                 RespondError(context, "Couldn't Set User Permissions", $"Unrecognized Permission Level {permissionsInfo["perms"]}.");
                 return;
             }
+
+            Notification.MakeNotification(account, "Your MSJ Permissions have been Changed", $"Your permissions have been set to {PermissionsHelper.GetDescription(account.Permissions)} by {loggedInAccount.Name}.", Notification.Serverity.CanIgnore);
             Redirect(context, $"/userinfo?username={account.Name}");
         }
     }
