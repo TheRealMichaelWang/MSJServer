@@ -23,11 +23,21 @@ namespace MSJServer
             }
             string content = File.ReadAllText(article.PublishStatus == PublishStatus.Published ? "templates/reader.html" : "templates/reader_unpub.html");
             content = content.Replace("{TITLE}", article.Title);
-            content = content.Replace("{AUTHOR}", article.Author);
             content = content.Replace("{UPLOADTIME}", article.UploadTime.ToLongDateString());
             content = content.Replace("{BODY}", article.Body);
+            content = content.Replace("{AUTHOR}", article.Author);
+            content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published).Select((comment) => comment.ToHTML())));
 
-            content = content.Replace("{COMMENTS}", string.Join("", article.LoadComments(article.PublishStatus == PublishStatus.Published)));
+            if (accounts.ContainsKey(article.Author))
+            {
+                if (isEditor)
+                    content = content.Replace("{AUTHORDISP}", $"{article.Author}({accounts[article.Author].Email})");
+                else
+                    content = content.Replace("{AUTHORDISP}", article.Author);
+            }
+            else
+                content = content.Replace("{AUTHORDISP}", $"{article.Author}(deleted account)");
+
             if (article.PublishStatus == PublishStatus.UnderReview)
                 content = content.Replace("{PUBLISHSTAT}", "<div class=\"alert alert-warning\">This work is currently under review.</div>");
             else if (article.PublishStatus == PublishStatus.Rejected)
@@ -54,7 +64,8 @@ namespace MSJServer
                 content = content.Replace("{CHECK}", "<input class=\"form-check-label\" type=\"checkbox\" id=\"revise\" name=\"revise\" value=\"yes\">Request Revision");
                 if (article.PublishStatus != PublishStatus.Rejected)
                     content = content.Replace("{BUTTONS}", "<div><a href=\"/editor?op=publish&id={ARTICLEID}\" class=\"btn btn-outline-success\">Aprove Article for Publication</a><a href=\"/editor?op=reject&id={ARTICLEID}\" class=\"btn btn-outline-danger\">Reject Article for Publication</a></div>");
-            } else
+            } 
+            else
             {
                 content = content.Replace("{CHECK}", string.Empty);
             }
@@ -81,9 +92,16 @@ namespace MSJServer
                 RespondError(context, "Failed to Upload Article", "You must be logged in to upload an article.");
                 return;
             }
+            else if (account.ShouldVerify)
+            {
+                RedirectToVerify(context, "Verify your account before uploading articles.");
+                return;
+            }
 
             Article article = new Article(Guid.NewGuid(), articleInfo["title"], articleInfo["body"], account.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Guid.Empty, Guid.Empty);
             article.Save();
+
+            Notification.MakeNotification(account, $"Confirmation of Receipt of {article.Title}", $"The MSJ confirms that we've received your article, {article.Title}, at {article.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, $"/article?id={article.Id}");
             Redirect(context, $"/article?id={article.Id}");
         }
 
@@ -96,11 +114,17 @@ namespace MSJServer
                 RespondError(context, $"Failed to Revise Article.", $"Are you sure article {id} exists?");
                 return;
             }
+
             Article oldArticle = Article.FromFile(id);
             Account? account = GetLoggedInAccount(context);
             if (account == null)
             {
                 RespondError(context, "Failed to Revise Article.", "You must be logged in to revise an article.");
+                return;
+            }
+            else if (account.ShouldVerify)
+            {
+                RedirectToVerify(context, "Verify your account before revising an article.");
                 return;
             }
 
@@ -110,7 +134,9 @@ namespace MSJServer
                 RespondError(context, "Failed to Revise Article.", "You are not the author of the article, nor are you an editor.", "This article has already been published, or revised by the author.");
                 return;
             }
+
             newArticle.Save();
+            Notification.MakeNotification(account, $"Confirmation of Receipt of Revision of {newArticle.Title}", $"The MSJ confirms that we've received your revision of {newArticle.Title}, at {newArticle.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, $"/article?id={newArticle.Id}");
             Redirect(context, $"/article?id={newArticle.Id}");
         }
 
@@ -142,6 +168,7 @@ namespace MSJServer
                 RespondError(context, "Failed to Perform Editing Operation.", $"Are you sure article {id} exists?");
                 return;
             }
+            
             Article article = Article.FromFile(id);
             if (article.PublishStatus != PublishStatus.UnderReview)
             {
@@ -161,6 +188,10 @@ namespace MSJServer
                 return;
             }
 
+            Account? author = null;
+            if (accounts.ContainsKey(article.Author))
+                author = accounts[article.Author];
+            
             switch (articleInfo["op"])
             {
                 case "p":
@@ -168,11 +199,15 @@ namespace MSJServer
                 case "publish":
                     article.Publish();
                     Redirect(context, $"/article?id={article.Id}");
+                    if (author != null)
+                        Notification.MakeNotificationFromTemplate(author, "publish_email.txt", ("TITLE", article.Title), ("ID", article.Id.ToString()), ("PUBLISHTIME", article.PublishTime.ToString()));
                     break;
                 case "rej":
                 case "reject":
                     article.Reject();
                     Redirect(context, $"/article?id={article.Id}");
+                    if (author != null)
+                        Notification.MakeNotificationFromTemplate(author, "revise_email.txt", ("TITLE", article.Title), ("ID", article.Id.ToString()));
                     break;
                 default:
                     RespondError(context, "Failed to Perform Editing Operation", $"Unrecognized editor operation {articleInfo["op"]}.");

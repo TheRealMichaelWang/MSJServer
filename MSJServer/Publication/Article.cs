@@ -23,11 +23,12 @@ namespace MSJServer
                 return FromReader(reader, id);
         }
 
-        public static Guid[] GetPublishedArticles(bool unpublished)
+        public static Guid[] GetPublishedArticles(bool unpublished, int page, int pageSize)
         {
             string[] paths = Directory.GetFiles("articles");
             List<Guid> validArticles = new List<Guid>(10);
 
+            int toLoad = (page - 1) * pageSize;
             foreach (string path in paths)
             {
                 //32 digits, 4 dashes
@@ -44,6 +45,7 @@ namespace MSJServer
                     validArticles.Add(article.Id);
                 }
             }
+
             return validArticles.ToArray();
         }
 
