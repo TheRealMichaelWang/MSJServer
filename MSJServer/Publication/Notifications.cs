@@ -122,7 +122,7 @@ namespace MSJServer
             }
         }
 
-        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, string resolveAction = "", bool deleteOnResolve=true)
+        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, (string, string)? resolveAction = null, bool deleteOnResolve=true)
         {
             EnsureNotificationsDir(receiver);
 
@@ -159,7 +159,7 @@ namespace MSJServer
 
                 try
                 {
-                    MakeNotification(receiver, templateInfo["subject"], reader.ReadToEnd(), (Serverity)byte.Parse(templateInfo["warning"]), templateInfo.ContainsKey("resolve") ? templateInfo["resolve"] : string.Empty, templateInfo.ContainsKey("delete") ? bool.Parse(templateInfo["delete"]) : true);
+                    MakeNotification(receiver, templateInfo["subject"], reader.ReadToEnd(), (Serverity)byte.Parse(templateInfo["warning"]), templateInfo.ContainsKey("resolve") ? (templateInfo.ContainsKey("resolve-title") ? templateInfo["resolve-title"] : "Resolve", templateInfo["resolve"]) : null, templateInfo.ContainsKey("delete") ? bool.Parse(templateInfo["delete"]) : true);
                 }
                 catch (KeyNotFoundException e)
                 {
@@ -171,7 +171,7 @@ namespace MSJServer
         public DateTime Time { get; private set; }
         public string Subject { get; private set; }
         public string Body { get; private set; }
-        public string ResolveAction { get; private set; }
+        public (string, string)? ResolveAction { get; private set; }
         public Serverity ResponseServerity { get; private set; }
         public bool DeleteOnResolve { get; private set; }
 
@@ -184,9 +184,9 @@ namespace MSJServer
         private string FilePath => Path.Combine("users", Receiver.Name, "notifs", Id.ToString());
 
         public bool Resolved { get => _resolved; set { _read = true; _resolved = value; if (DeleteOnResolve && _resolved) Delete(); else Save(); } }
-        public bool Read { get => _read; set { _read = value; if (_read && ResolveAction == string.Empty) Resolved = true; else Save(); } }
+        public bool Read { get => _read; set { _read = value; if (_read && ResolveAction == null) Resolved = true; else Save(); } }
 
-        private Notification(DateTime time, string subject, string body, string resolveAction, bool read, Serverity responseSeverity, bool deleteOnResolve, Guid id, Account reciever)
+        private Notification(DateTime time, string subject, string body, (string, string)? resolveAction, bool read, Serverity responseSeverity, bool deleteOnResolve, Guid id, Account reciever)
         {
             Time = time;
             Subject = subject;
@@ -199,7 +199,7 @@ namespace MSJServer
             Receiver = reciever;
         }
 
-        private Notification(BinaryReader reader, Guid id, Account reciever) : this(new DateTime(reader.ReadInt64()), reader.ReadString(), reader.ReadString(), reader.ReadString(), reader.ReadBoolean(), (Serverity)reader.ReadByte(), reader.ReadBoolean(), id, reciever)
+        private Notification(BinaryReader reader, Guid id, Account reciever) : this(new DateTime(reader.ReadInt64()), reader.ReadString(), reader.ReadString(), reader.ReadBoolean() ? (reader.ReadString(), reader.ReadString()) : null, reader.ReadBoolean(), (Serverity)reader.ReadByte(), reader.ReadBoolean(), id, reciever)
         {
 
         }
@@ -218,7 +218,14 @@ namespace MSJServer
             writer.Write(Time.Ticks);
             writer.Write(Subject);
             writer.Write(Body);
-            writer.Write(ResolveAction);
+            if (ResolveAction == null)
+                writer.Write(false);
+            else
+            {
+                writer.Write(true);
+                writer.Write(ResolveAction.Value.Item1);
+                writer.Write(ResolveAction.Value.Item2);
+            }
             writer.Write(Read);
             writer.Write((byte)ResponseServerity);
             writer.Write(DeleteOnResolve);
@@ -256,11 +263,13 @@ namespace MSJServer
             else
                 htmlBuilder.Append(Body.Replace("\r\n", "<br>").Replace("\n", "<br>"));
 
-            if(ResolveAction != string.Empty)
+            if(ResolveAction != null)
             {
                 htmlBuilder.Append("<br><a class=\"btn btn-primary btn-sm\" href=\"/resolve_notif?notifid=");
                 htmlBuilder.Append(Id.ToString());
-                htmlBuilder.Append("\">Resolve</a>");
+                htmlBuilder.Append("\">");
+                htmlBuilder.Append(ResolveAction.Value.Item1);
+                htmlBuilder.Append("</a>");
             }
 
             htmlBuilder.Append("</div>");
@@ -294,8 +303,13 @@ namespace MSJServer
                 RespondError(context, $"Unable to load notification {id}. It probably doesn't exist anymore, if it did at all.");
                 return;
             }
+            else if(notification.ResolveAction == null)
+            {
+                RespondError(context, $"No resolve action configured for notification {id}.");
+                return;
+            }
 
-            Redirect(context, notification.ResolveAction);
+            Redirect(context, notification.ResolveAction.Value.Item2);
             notification.Resolved = true;
 
             return;

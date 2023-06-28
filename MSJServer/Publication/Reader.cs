@@ -101,7 +101,7 @@ namespace MSJServer
             Article article = new Article(Guid.NewGuid(), articleInfo["title"], articleInfo["body"], account.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Guid.Empty, Guid.Empty);
             article.Save();
 
-            Notification.MakeNotification(account, $"Confirmation of Receipt of {article.Title}", $"The MSJ confirms that we've received your article, {article.Title}, at {article.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, $"/article?id={article.Id}");
+            Notification.MakeNotification(account, $"Confirmation of Receipt of {article.Title}", $"The MSJ confirms that we've received your article, {article.Title}, at {article.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, ("View Submission",$"/article?id={article.Id}"));
             Redirect(context, $"/article?id={article.Id}");
         }
 
@@ -136,7 +136,7 @@ namespace MSJServer
             }
 
             newArticle.Save();
-            Notification.MakeNotification(account, $"Confirmation of Receipt of Revision of {newArticle.Title}", $"The MSJ confirms that we've received your revision of {newArticle.Title}, at {newArticle.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, $"/article?id={newArticle.Id}");
+            Notification.MakeNotification(account, $"Confirmation of Receipt of Revision of {newArticle.Title}", $"The MSJ confirms that we've received your revision of {newArticle.Title}, at {newArticle.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, ("View Revision", $"/article?id={newArticle.Id}"));
             Redirect(context, $"/article?id={newArticle.Id}");
         }
 

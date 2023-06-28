@@ -77,7 +77,7 @@ namespace MSJServer
 
             if (!loggedOn.IsVerified)
             {
-                Notification.MakeNotification(loggedOn, "You still haven't verified your account!", $"Seriously, if you don't verify your account (and identity) by {loggedOn.CreationDate.AddDays(7).ToShortDateString()}, we'll delete your account!", Notification.Serverity.MustResolve, "verify_landing");
+                Notification.MakeNotification(loggedOn, "You still haven't verified your account!", $"Seriously, if you don't verify your account (and identity) by {loggedOn.CreationDate.AddDays(7).ToShortDateString()}, we'll delete your account!", Notification.Serverity.MustResolve, ("Verify My Account", "verify_landing"));
             }
             LogAccountIn(context, loggedOn);
         }
@@ -127,7 +127,7 @@ namespace MSJServer
                 return;
             }
 
-            Notification.MakeNotification(newAccount, "Welcome to the MSJ!", "We're glad you're here to join us. Verify your account as soon as possible within the next 7 days(or else...)!", Notification.Serverity.ShouldResolve, "verify_landing", false);
+            Notification.MakeNotification(newAccount, "Welcome to the MSJ!", "We're glad you're here to join us. Verify your account as soon as possible within the next 7 days(or else...)!", Notification.Serverity.ShouldResolve, ("Verify My Account", "verify_landing"), false);
             LogAccountIn(context, newAccount);
         }
 
