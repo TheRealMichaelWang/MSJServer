@@ -40,17 +40,20 @@ namespace MSJServer.HTTP
          */
         public Action<HttpListenerContext>? FindRegister(HttpListenerRequest httpListenerRequest, HTTPServer server)
         {
-            HttpMethod requestMethod = httpListenerRequest.GetHttpMethod();
-            if (requestHandlerRegisters.ContainsKey(requestMethod))
+            HttpMethod? requestMethod = httpListenerRequest.GetHttpMethod();
+            if (!requestMethod.HasValue)
+                return null;
+
+            if (requestHandlerRegisters.ContainsKey(requestMethod.Value))
             {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 #pragma warning disable CS8604 // Possible null reference argument.
-                if (requestHandlerRegisters[requestMethod].Handlers.ContainsKey(httpListenerRequest.Url.AbsoluteUri))
-                    return requestHandlerRegisters[requestMethod].Handlers[httpListenerRequest.Url.AbsoluteUri];
-                else if (requestHandlerRegisters[requestMethod].Handlers.ContainsKey(httpListenerRequest.RawUrl))
-                    return requestHandlerRegisters[requestMethod].Handlers[httpListenerRequest.RawUrl];
-                else if (requestHandlerRegisters[requestMethod].Handlers.ContainsKey(httpListenerRequest.Url.LocalPath))
-                    return requestHandlerRegisters[requestMethod].Handlers[httpListenerRequest.Url.LocalPath];
+                if (requestHandlerRegisters[requestMethod.Value].Handlers.ContainsKey(httpListenerRequest.Url.AbsoluteUri))
+                    return requestHandlerRegisters[requestMethod.Value].Handlers[httpListenerRequest.Url.AbsoluteUri];
+                else if (requestHandlerRegisters[requestMethod.Value].Handlers.ContainsKey(httpListenerRequest.RawUrl))
+                    return requestHandlerRegisters[requestMethod.Value].Handlers[httpListenerRequest.RawUrl];
+                else if (requestHandlerRegisters[requestMethod.Value].Handlers.ContainsKey(httpListenerRequest.Url.LocalPath))
+                    return requestHandlerRegisters[requestMethod.Value].Handlers[httpListenerRequest.Url.LocalPath];
 #pragma warning restore CS8604 // Possible null reference argument.
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
             }

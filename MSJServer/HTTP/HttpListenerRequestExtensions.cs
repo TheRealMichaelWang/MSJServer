@@ -4,9 +4,16 @@ namespace MSJServer.HTTP
 {
     public static partial class HttpListenerRequestExtensions
     {
-        public static HttpMethod GetHttpMethod(this HttpListenerRequest request)
+        public static HttpMethod? GetHttpMethod(this HttpListenerRequest request)
         {
-            return (HttpMethod)Enum.Parse(typeof(HttpMethod), request.HttpMethod, true);
+            try
+            {
+                return (HttpMethod)Enum.Parse(typeof(HttpMethod), request.HttpMethod, true);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
     }
 }
