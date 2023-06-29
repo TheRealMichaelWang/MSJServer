@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MSJServer
 {
@@ -157,9 +158,11 @@ namespace MSJServer
                     templateInfo.Add(parts[0].Trim(), parts[1].Trim());
                 }
 
+                bool getBoolAttribute(string attribute) => templateInfo.ContainsKey(attribute) ? bool.Parse(templateInfo[attribute]) : false;
+
                 try
                 {
-                    MakeNotification(receiver, templateInfo["subject"], reader.ReadToEnd(), (Serverity)byte.Parse(templateInfo["warning"]), templateInfo.ContainsKey("resolve") ? (templateInfo.ContainsKey("resolve-title") ? templateInfo["resolve-title"] : "Resolve", templateInfo["resolve"]) : null, templateInfo.ContainsKey("delete") ? bool.Parse(templateInfo["delete"]) : true);
+                    MakeNotification(receiver, templateInfo["subject"], reader.ReadToEnd(), (Serverity)byte.Parse(templateInfo["warning"]), templateInfo.ContainsKey("resolve") ? (templateInfo.ContainsKey("resolve-title") ? templateInfo["resolve-title"] : "Resolve", templateInfo["resolve"]) : null, getBoolAttribute("delete"), getBoolAttribute("ishtml"));
                 }
                 catch (KeyNotFoundException e)
                 {
@@ -258,10 +261,11 @@ namespace MSJServer
             htmlBuilder.Append(Subject);
             htmlBuilder.Append("</b><br>");
 
+            string nohtmlBody = Regex.Replace(Body, "<.*?>", string.Empty);
             if (Body.Length > BodyCharacterLimit)
-                htmlBuilder.Append(Body.Substring(0, BodyCharacterLimit).Replace("\r\n", "<br>").Replace("\n", "<br>") + "...");
+                htmlBuilder.Append(nohtmlBody.Substring(0, BodyCharacterLimit).Replace("\r\n", "<br>").Replace("\n", "<br>") + "...");
             else
-                htmlBuilder.Append(Body.Replace("\r\n", "<br>").Replace("\n", "<br>"));
+                htmlBuilder.Append(nohtmlBody.Replace("\r\n", "<br>").Replace("\n", "<br>"));
 
             if(ResolveAction != null)
             {

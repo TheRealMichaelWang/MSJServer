@@ -159,7 +159,7 @@ namespace MSJServer
 
         public List<Comment> LoadComments(bool excludeRevisions)
         {
-            if (PreviousRevision != Guid.Empty)
+            if (PreviousRevision != Guid.Empty && Exists(PreviousRevision))
             {
                 Article article = FromFile(PreviousRevision);
                 return article.LoadComments(excludeRevisions);
@@ -169,7 +169,7 @@ namespace MSJServer
 
         public void MakeComment(Comment comment)
         {
-            if (PreviousRevision != Guid.Empty)
+            if (PreviousRevision != Guid.Empty && Exists(PreviousRevision))
             {
                 Article article = FromFile(PreviousRevision);
                 article.MakeComment(comment);
