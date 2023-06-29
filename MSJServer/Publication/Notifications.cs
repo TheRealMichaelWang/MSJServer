@@ -30,7 +30,7 @@ namespace MSJServer
 
         private static bool ValidateRemoteCertificate(object sender, X509Certificate? cert, X509Chain? chain, SslPolicyErrors policyErrors) => policyErrors == SslPolicyErrors.RemoteCertificateNameMismatch && (cert != null && cert.Subject.EndsWith("google.com"));
 
-        public static bool Notify(string email, string subject, string body)
+        public static bool Notify(string email, string subject, string body, MimeKit.Text.TextFormat format = MimeKit.Text.TextFormat.Plain)
         {
             using (SmtpClient client = new SmtpClient())
             using (MimeMessage message = new MimeMessage())
@@ -38,7 +38,7 @@ namespace MSJServer
                 message.From.Add(InternetAddress.Parse("no-reply@themsj.org"));
                 message.To.Add(InternetAddress.Parse(email));
                 message.Subject = subject;
-                message.Body = new TextPart(MimeKit.Text.TextFormat.Plain) { Text = body };
+                message.Body = new TextPart(format) { Text = body };
 
                 try
                 {
@@ -122,7 +122,7 @@ namespace MSJServer
             }
         }
 
-        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, (string, string)? resolveAction = null, bool deleteOnResolve=true)
+        public static void MakeNotification(Account receiver, string subject, string body, Serverity serverity, (string, string)? resolveAction = null, bool deleteOnResolve=true, bool isHtml = false)
         {
             EnsureNotificationsDir(receiver);
 
@@ -130,7 +130,7 @@ namespace MSJServer
             notification.Save();
 
             if (receiver.IsVerified)
-                EmailNotifier.Notify(receiver.Email, subject, body);
+                EmailNotifier.Notify(receiver.Email, subject, body, isHtml ? MimeKit.Text.TextFormat.Html : MimeKit.Text.TextFormat.Plain);
         }
 
         public static void MakeNotificationFromTemplate(Account receiver, string templateFile, params (string, string)[] textParams)
