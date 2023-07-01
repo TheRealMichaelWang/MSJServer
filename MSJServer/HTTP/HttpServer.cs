@@ -23,17 +23,8 @@ namespace MSJServer.HTTP
             listener = new HttpListener();
         }
 
-        public void ServeStatic(DirectoryInfo directory, string path="") => router.ServeStatic(directory, path);
-
-        private string BuildUri(string path = "", string query = "")
+        protected void FinalizeConstructor()
         {
-            return new UriBuilder(Scheme, Hostname, 80, path, query).ToString();
-        }
-
-        public void Start()
-        {
-            while (!initialized) { }
-
             router.GetAllRoutes().ToList().ForEach(route =>
             {
                 string query = string.Empty;
@@ -47,6 +38,16 @@ namespace MSJServer.HTTP
                 listener.Prefixes.Add(BuildUri(route, query));
             });
             listener.Prefixes.Add(BuildUri());
+        }
+
+        public void ServeStatic(DirectoryInfo directory, string path="") => router.ServeStatic(directory, path);
+
+        private string BuildUri(string path = "", string query = "") => new UriBuilder(Scheme, Hostname, 80, path, query).ToString();
+
+        public void Start()
+        {
+            while (!initialized) { }
+
             listener.Start();
             ThreadPool.QueueUserWorkItem((o) =>
             {
@@ -69,10 +70,6 @@ namespace MSJServer.HTTP
                                 else
                                     ProcessRequest(context, handler);
                             }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine(e);
-                            }
                             finally
                             {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
@@ -82,9 +79,9 @@ namespace MSJServer.HTTP
                         }, listener.GetContext());
                     }
                 }
-                catch
+                catch (Exception e)
                 {
-
+                    Console.WriteLine(e);
                 }
             });
         }

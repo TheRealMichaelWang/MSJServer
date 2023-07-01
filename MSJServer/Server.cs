@@ -48,6 +48,7 @@ namespace MSJServer
             GET["/index"] = HandleFrontPageAccess;
             GET["/resolve_notif"] = HandleResolveNotification;
             ServeStatic(new DirectoryInfo("static"));
+            FinalizeConstructor();
 
             base.initialized = true;
             ThreadPool.QueueUserWorkItem((o) =>
