@@ -46,7 +46,8 @@ namespace MSJServer
                 return;
             }
 
-            Guid[] publishedArticles = Article.GetPublishedArticles(queryInfo.ContainsKey("unpub"), page, 10);
+            Guid[] publishedArticles = Article.GetArticles(queryInfo.ContainsKey("unpub"), page, 10);
+
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < publishedArticles.Length; i++)
             {

@@ -15,5 +15,12 @@ namespace MSJServer.HTTP
                 return null;
             }
         }
+
+        public static void Log(this HttpListenerRequest request, Logger.Severity severity, string message, string? user = null)
+        {
+            Logger.Log(severity, message, user, request.RemoteEndPoint.Address);
+        }
+
+        
     }
 }

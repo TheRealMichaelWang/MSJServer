@@ -47,12 +47,15 @@ namespace MSJServer
             POST["/comment"] = HandleCommentRequest;
             GET["/index"] = HandleFrontPageAccess;
             GET["/resolve_notif"] = HandleResolveNotification;
+            GET["/logs"] = HandleFetchLogs;
             ServeStatic(new DirectoryInfo("static"));
             FinalizeConstructor();
 
             base.initialized = true;
             ThreadPool.QueueUserWorkItem((o) =>
             {
+                Logger.Log(Logger.Severity.Information, "Server has started listening.");
+
                 while (true)
                 {
                     lock (sessions) //lock (sessionsToEnd)

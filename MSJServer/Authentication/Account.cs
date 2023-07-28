@@ -23,6 +23,8 @@ namespace MSJServer
                     writer.Write(0);
                 File.Create("accounts.db").Close();
 
+                Logger.Log(Logger.Severity.Information, "No account database found, created one just now.");
+
                 return new Dictionary<string, Account>();
             }
 
@@ -30,6 +32,8 @@ namespace MSJServer
             using (FileStream stream = new FileStream("accounts.size", FileMode.Open, FileAccess.Read))
             using (BinaryReader reader = new BinaryReader(stream))
                 count = reader.ReadInt32();
+
+            Logger.Log(Logger.Severity.Information, $"Found {count} accounts.");
 
             bool invalidAccountsDetected = false;
             Dictionary<string, Account> loadedAccounts = new Dictionary<string, Account>(count);
@@ -53,6 +57,7 @@ namespace MSJServer
                 }
                 accountSize = stream.Position;
             }
+            Logger.Log(Logger.Severity.Information, $"Finished loading {count} account(s), {accountOffsets} bytes.");
 
             if (Account.DatabaseVersion < Account.LatestDatabaseVersion || invalidAccountsDetected)
             {
@@ -69,12 +74,15 @@ namespace MSJServer
                             accountOffsets[loadedAccount] = position;
                             accountSizes[loadedAccount] = stream.Position - position;
                         }
+                        else
+                            Logger.Log(Logger.Severity.Information, $"Removing account per policies.", loadedAccount.Name);
                     }
                     accountSize = stream.Position;
                 }
 
                 if (!invalidAccountsDetected)
                 {
+                    Logger.Log(Logger.Severity.Information, $"Account database upgraded from {Account.DatabaseVersion} to {Account.LatestDatabaseVersion}.");
                     //update database version
                     Account.DatabaseVersion = Account.LatestDatabaseVersion;
                 }

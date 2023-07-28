@@ -9,6 +9,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace MSJServer
 {
@@ -24,6 +25,8 @@ namespace MSJServer
 #pragma warning disable CS8600 // Almost always will return answers, gmail.com is gmail
 #pragma warning disable CS8601
             SMTPServerRecord = (MxRecord)client.Query("gmail.com", QueryType.MX).Answers.MinBy((answer) => ((MxRecord)answer).Preference);
+            Debug.Assert(SMTPServerRecord != null);
+            Logger.Log(Logger.Severity.Information, $"LAUSD Mail Exchange Server found at {SMTPServerRecord.Exchange}.");
 #pragma warning restore CS8601
 #pragma warning restore CS8600
             ServicePointManager.ServerCertificateValidationCallback += new RemoteCertificateValidationCallback(ValidateRemoteCertificate);
@@ -33,6 +36,8 @@ namespace MSJServer
 
         public static bool Notify(string email, string subject, string body, MimeKit.Text.TextFormat format = MimeKit.Text.TextFormat.Plain)
         {
+            Logger.Log(Logger.Severity.Information, $"Email {email} has been notified.", email);
+
             using (SmtpClient client = new SmtpClient())
             using (MimeMessage message = new MimeMessage())
             {
@@ -51,8 +56,9 @@ namespace MSJServer
                         client.Send(message);
                         failed = false;
                     }
-                    catch
+                    catch(Exception e)
                     {
+                        Logger.Log(Logger.Severity.Warning, $"Failed to send email to {email}: {e.Message}", email);
                         failed = true;
                     }
                     finally
@@ -62,8 +68,9 @@ namespace MSJServer
 
                     return !failed;
                 }
-                catch
+                catch(Exception e)
                 {
+                    Logger.Log(Logger.Severity.Warning, $"Failed to connect to mail exchange server: {e.Message}", email);
                     return false; //connection was never established
                 }
             }
@@ -297,6 +304,7 @@ namespace MSJServer
             Guid id;
             if (!Guid.TryParse(queryInfo["notifid"], out id))
             {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot Resolve Notification, invalid notification Id({queryInfo["notifid"]}) submitted.", account?.Name);
                 RespondError(context, $"{queryInfo["notifid"]} is not a valid GUID.");
                 return;
             }
@@ -304,15 +312,24 @@ namespace MSJServer
             Notification? notification = Notification.FromId(account, id);
             if(notification == null)
             {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot Resolve Notification, invalid notification GUID({id}) submitted.", account?.Name);
                 RespondError(context, $"Unable to load notification {id}. It probably doesn't exist anymore, if it did at all.");
                 return;
             }
             else if(notification.ResolveAction == null)
             {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot Resolve Notification, no resolve action for notification {id}.", account?.Name);
                 RespondError(context, $"No resolve action configured for notification {id}.");
                 return;
             }
+            else if (notification.Resolved)
+            {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot Resolve Notification, Notification {id} has already been resolved.", account?.Name);
+                RespondError(context, $"Notification {id} has already been resolved.");
+                return;
+            }
 
+            context.Request.Log(Logger.Severity.Information, $"Notification {id} has been resolved.", account?.Name);
             Redirect(context, notification.ResolveAction.Value.Item2);
             notification.Resolved = true;
 

@@ -103,6 +103,8 @@ namespace MSJServer
 
             Notification.MakeNotification(account, $"Confirmation of Receipt of {article.Title}", $"The MSJ confirms that we've received your article, {article.Title}, at {article.UploadTime.ToLongTimeString()}. Thank you for your submission.", Notification.Serverity.CanIgnore, ("View Submission",$"/article?id={article.Id}"));
             Redirect(context, $"/article?id={article.Id}");
+
+            context.Request.Log(Logger.Severity.Information, $"User uploaded article (name {article.Title}).", account.Name);
         }
 
         private void HandleReviseArticle(HttpListenerContext context)

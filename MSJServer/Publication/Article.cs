@@ -23,26 +23,42 @@ namespace MSJServer
                 return FromReader(reader, id);
         }
 
-        public static Guid[] GetPublishedArticles(bool unpublished, int page, int pageSize)
+        public static Guid[] GetArticles(bool excludeUnpublished, int page, int pageSize)
         {
             string[] paths = Directory.GetFiles("articles");
             List<Guid> validArticles = new List<Guid>(10);
 
             int toLoad = (page - 1) * pageSize;
+            int loaded = 0;
             foreach (string path in paths)
             {
                 //32 digits, 4 dashes
                 Article article = FromFile(Guid.Parse(path.Substring(path.Length - 36, 36)));
+                loaded++;
 
-                if (unpublished)
+                if (excludeUnpublished)
                 {
                     if (article.PublishStatus == PublishStatus.Published)
                         continue;
-                    validArticles.Add(article.Id);
+
+                    if (loaded > toLoad)
+                    {
+                        validArticles.Add(article.Id);
+
+                        if (loaded == toLoad + pageSize)
+                            break;
+                    }
+
                 }
                 else if (article.PublishStatus == PublishStatus.Published)
                 {
-                    validArticles.Add(article.Id);
+                    if (loaded > toLoad)
+                    {
+                        validArticles.Add(article.Id);
+
+                        if (loaded == toLoad + pageSize)
+                            break;
+                    }
                 }
             }
 
@@ -55,10 +71,13 @@ namespace MSJServer
             switch (articleVersion)
             {
                 case 0:
+                    Logger.Log(Logger.Severity.Information, $"Upgrading article {id} from version 0.");
                     return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), Guid.Empty, Guid.Empty);
                 case 1:
+                    Logger.Log(Logger.Severity.Information, $"Upgrading article {id} from version 1.");
                     return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), new Guid(reader.ReadBytes(16)), new Guid(reader.ReadBytes(16)));
                 default:
+                    Logger.Log(Logger.Severity.Alert, $"Unable to load article {id} because of invalid version {articleVersion}.");
                     throw new InvalidOperationException($"Invalid article version {articleVersion}, for article {id}.");
             }
         }
@@ -125,6 +144,8 @@ namespace MSJServer
             PublishStatus = PublishStatus.Published;
             PublishTime = DateTime.Now;
             Save();
+
+            Logger.Log(Logger.Severity.Information, $"Article {Title} (Id {Id}) has been published.", Author);
         }
 
         public void Reject()
@@ -134,6 +155,8 @@ namespace MSJServer
 
             PublishStatus = PublishStatus.Rejected;
             Save();
+
+            Logger.Log(Logger.Severity.Information, $"Article {Title} (Id {Id}) has been rejected.", Author);
         }
 
         public Article? Revise(Account newAuthor, string body)
@@ -148,10 +171,13 @@ namespace MSJServer
                 NextRevision = revised.Id;
                 Title = $"Unrevised {Title}, dated {UploadTime.ToShortDateString()}";
                 Save();
+
+                Logger.Log(Logger.Severity.Information, $"Article {Title}(Id {Id}) was revised by author.", Author);
                 return revised;
             }
             else if (newAuthor.Permissions >= Permissions.Editor)
             {
+                Logger.Log(Logger.Severity.Information, $"Article {Title}(Id {Id}, Author {Author}) was revised by an editor.", newAuthor.Name);
                 return new Article(Guid.NewGuid(), $"{Title} - Revised by {newAuthor.Name}", body, newAuthor.Name, PublishStatus.UnderReview, DateTime.MaxValue, DateTime.Now, Id, Guid.Empty);
             }
             return null;

@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using MSJServer.HTTP;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MSJServer
 {
@@ -75,6 +72,8 @@ namespace MSJServer
                 writer.Write(Time.Ticks);
             }
         }
+        
+        private static object lockObject = new object();
 
         static Logger()
         {
@@ -82,17 +81,20 @@ namespace MSJServer
                 Directory.CreateDirectory("logs");
         }
 
-        public static void Log(Severity severity, string description, string? username, IPAddress? address)
+        public static void Log(Severity severity, string description, string? username = null, IPAddress? address = null)
         {
-            using(FileStream stream = new FileStream(Path.Combine("logs", $"log_{DateTime.Now.Date.ToString("yyyy-dd-M")}"), FileMode.Append, FileAccess.Write))
-            using(BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
+            lock (lockObject)
             {
-                Event @event = new Event(severity, description, username, address, DateTime.Now);
-                @event.WriteTo(writer);
+                using (FileStream stream = new FileStream(Path.Combine("logs", $"log_{DateTime.Now.Date.ToString("yyyy-dd-M")}"), FileMode.Append, FileAccess.Write, FileShare.None))
+                using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
+                {
+                    Event @event = new Event(severity, description, username, address, DateTime.Now);
+                    @event.WriteTo(writer);
+                }
             }
         }
 
-        public static Event[] LoadEvents(DateTime from, DateTime to, int offset = 0, int limit = int.MaxValue)
+        public static Event[] LoadEvents(DateTime from, DateTime to, int offset = 0, int limit = 10, string? filterUser = null, IPAddress? filterIp = null, Severity minSeverity = Severity.Information)
         {
             List<Event> events = new(10);
 
@@ -102,36 +104,81 @@ namespace MSJServer
             int scanned = 0;
             for(int i = 0; i < timeSpan.TotalDays; i++)
             {
-                string fileName = $"log_{start.ToString("yyyy-dd-M")}";
+                string fileName = Path.Combine("logs", $"log_{start.AddDays(i).ToString("yyyy-dd-M")}");
                 if (!File.Exists(fileName))
-                    break;
+                    continue;
 
-                using (FileStream stream = new FileStream(Path.Combine("logs", fileName), FileMode.Open, FileAccess.Read))
-                using(BinaryReader reader = new BinaryReader(stream, Encoding.UTF8))
+                lock (lockObject)
                 {
-                    while(stream.Position < stream.Length)
+                    using (FileStream stream = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+                    using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8))
                     {
-                        Event @event = new Event(reader);
-                        if (@event.Time < from)
-                            continue;
-                        if (@event.Time > to)
-                            break;
-
-                        if(scanned < offset)
+                        while (stream.Position < stream.Length)
                         {
-                            events.Add(@event);
+                            Event @event = new Event(reader);
+                            if (@event.Time < from)
+                                continue;
+                            if (@event.Time > to)
+                                break;
+                            if (filterUser != null && filterUser != @event.Username)
+                                continue;
+                            if (filterIp != null && filterIp != @event.Address)
+                                continue;
+                            if (@event.Severity < minSeverity)
+                                continue;
 
-                            if (events.Count == limit)
-                                return events.ToArray();
+                            if (scanned >= offset)
+                            {
+                                events.Add(@event);
+
+                                if (events.Count == limit)
+                                    return events.ToArray();
+                            }
+
+                            scanned++;
                         }
-
-                        scanned++;
                     }
                 }
 
                 start = start.AddDays(1);
             }
             return events.ToArray();
+        }
+    }
+
+    partial class Server
+    {
+        private void HandleFetchLogs(HttpListenerContext context)
+        {
+            Dictionary<string, string> rangeInfo = context.Request.GetGETData();
+
+            DateTime from = rangeInfo.ContainsKey("from") ? DateTime.Parse(rangeInfo["from"]) : DateTime.Now.AddDays(-1);
+            DateTime to = rangeInfo.ContainsKey("to") ? DateTime.Parse(rangeInfo["to"]) : DateTime.Now;
+            int page = rangeInfo.ContainsKey("page") ? int.Parse(rangeInfo["page"]) : 0;
+            int pageSize = rangeInfo.ContainsKey("pagesize") ? int.Parse(rangeInfo["pagesize"]) : 10;
+
+            string? filterUser = rangeInfo.ContainsKey("user") ? rangeInfo["user"] : null;
+            IPAddress? filterIp = rangeInfo.ContainsKey("addr") ? IPAddress.Parse(rangeInfo["addr"]) : null;
+
+            StringBuilder stringBuilder = new StringBuilder();
+            
+            stringBuilder.Append("<table><tr><th>Severity</th><th>Timestamp</th><th>Description</th>");
+            if (filterUser == null)
+                stringBuilder.Append("<th>Username</th>");
+            if (filterIp == null)
+                stringBuilder.Append("<th>IP Address</th>");
+            stringBuilder.Append("</tr>");
+            foreach(Logger.Event @event in Logger.LoadEvents(from, to, page * pageSize, pageSize, filterUser, filterIp))
+            {
+                stringBuilder.Append($"<tr><td>{@event.Severity}</td><td>{@event.Time.ToString()}</td><td>{@event.Description}</td>");
+                if (filterUser == null)
+                    stringBuilder.Append(@event.Username == null ? "<td>N/A</td>" : $"<td>{@event.Username}</td>");
+                if (filterIp == null)
+                    stringBuilder.Append(@event.Address == null ? "<td>N/A</td>" : $"<td>{@event.Address}</td>");
+                stringBuilder.Append("</tr>");
+            }
+
+            Respond202(context, stringBuilder.ToString());
         }
     }
 }

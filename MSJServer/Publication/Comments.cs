@@ -91,6 +91,7 @@ namespace MSJServer
 
             if (!Article.Exists(id))
             {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot make comment, article {id} doesn't exist.");
                 RespondError(context, $"Failed to Make Comment", $"Are you sure article {id} exists?");
                 return;
             }
@@ -99,16 +100,19 @@ namespace MSJServer
             Account? account = GetLoggedInAccount(context);
             if (account == null)
             {
+                context.Request.Log(Logger.Severity.Warning, "Cannot make comment, not logged in.");
                 RespondError(context, "Failed to Make Comment", "You must be logged in to comment.");
                 return;
             }
             else if(requestRevision && account.Permissions < Permissions.Editor)
             {
+                context.Request.Log(Logger.Severity.Warning, "Cannot make comment, non-editor requested revision.", account?.Name);
                 RespondError(context, "Failed to Make Comment", "Only editors can request revisions.");
                 return;
             }
             else if (account.ShouldVerify)
             {
+                context.Request.Log(Logger.Severity.Warning, $"Cannot make comment, unverified account.", account?.Name);
                 RedirectToVerify(context, "Verify you account before posting comments.");
                 return;
             }
@@ -118,9 +122,15 @@ namespace MSJServer
             {
                 Account author = accounts[article.Author];
                 if (requestRevision)
+                {
                     Notification.MakeNotification(author, $"Revision Requested on {article.Title}.", $"An editor, {account.Name}, has requested that you revise your article, {article.Title}. Here are {account.Name}'s comments:\n{commentInfo["msg"]}", Notification.Serverity.ShouldResolve, ("View Article", $"/article?id={article.Id}"), true, true);
+                    context.Request.Log(Logger.Severity.Information, $"Editor requested revision on article {article.Title}.", account.Name);
+                }
                 else
+                {
                     Notification.MakeNotification(author, $"New Comment on {article.Title} from {account.Name}", commentInfo["msg"], Notification.Serverity.CanIgnore, ("View Article", $"/article?id={article.Id}"), true, true);
+                    context.Request.Log(Logger.Severity.Information, $"Commented on article {article.Title}.", account.Name);
+                }
             }
             Redirect(context, $"/article?id={id}");
         }

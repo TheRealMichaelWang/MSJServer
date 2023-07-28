@@ -48,6 +48,8 @@ namespace MSJServer.HTTP
         {
             while (!initialized) { }
 
+            Logger.Log(Logger.Severity.Information, "Starting server.");
+
             listener.Start();
             ThreadPool.QueueUserWorkItem((o) =>
             {
@@ -66,7 +68,10 @@ namespace MSJServer.HTTP
                                 Action<HttpListenerContext>? handler = router.FindRegister(context.Request, this);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                                 if (handler == null)
+                                {
+                                    Logger.Log(Logger.Severity.Warning, $"Unable to fetch register for method {context.Request.HttpMethod}", null, context.Request.RemoteEndPoint.Address);
                                     Respond404(context);
+                                }
                                 else
                                     ProcessRequest(context, handler);
                             }
@@ -81,7 +86,7 @@ namespace MSJServer.HTTP
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Logger.Log(Logger.Severity.Alert, e.Message);
                 }
             });
         }
@@ -90,6 +95,8 @@ namespace MSJServer.HTTP
         {
             listener.Stop();
             listener.Close();
+
+            Logger.Log(Logger.Severity.Information, "Server stopped.");
         }
 
         private void ProcessRequest(HttpListenerContext context, Action<HttpListenerContext> handler)
@@ -98,8 +105,9 @@ namespace MSJServer.HTTP
             {
                 handler(context);
             }
-            catch
+            catch(Exception e)
             {
+                context.Request.Log(Logger.Severity.Warning, e.Message);
                 Respond500(context);
             }
         }
