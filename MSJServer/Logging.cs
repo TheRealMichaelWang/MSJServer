@@ -96,13 +96,13 @@ namespace MSJServer
 
         public static Event[] LoadEvents(DateTime from, DateTime to, int offset = 0, int limit = 10, string? filterUser = null, IPAddress? filterIp = null, Severity minSeverity = Severity.Information)
         {
-            List<Event> events = new(10);
+            List<Event> events = new(Math.Min(100,limit));
 
-            DateTime start = from.Date;
+            DateTime start = from;
             TimeSpan timeSpan = to - from;
             
             int scanned = 0;
-            for(int i = 0; i < timeSpan.TotalDays; i++)
+            for(int i = (int)timeSpan.TotalDays; i >= 0; i--)
             {
                 string fileName = Path.Combine("logs", $"log_{start.AddDays(i).ToString("yyyy-dd-M")}");
                 if (!File.Exists(fileName))
@@ -139,8 +139,6 @@ namespace MSJServer
                         }
                     }
                 }
-
-                start = start.AddDays(1);
             }
             return events.ToArray();
         }
@@ -150,15 +148,30 @@ namespace MSJServer
     {
         private void HandleFetchLogs(HttpListenerContext context)
         {
+            Account? account = GetLoggedInAccount(context);
+            if(account == null)
+            {
+                RespondError(context, "You must log in to access logs.");
+                return;
+            }
+
             Dictionary<string, string> rangeInfo = context.Request.GetGETData();
 
-            DateTime from = rangeInfo.ContainsKey("from") ? DateTime.Parse(rangeInfo["from"]) : DateTime.Now.AddDays(-1);
-            DateTime to = rangeInfo.ContainsKey("to") ? DateTime.Parse(rangeInfo["to"]) : DateTime.Now;
+            DateTime to = rangeInfo.ContainsKey("to") ? DateTime.Now.AddDays(-double.Parse(rangeInfo["to"])) : DateTime.Now;
+            DateTime from = rangeInfo.ContainsKey("span") ? to.AddDays(-double.Parse(rangeInfo["span"])) : to.AddDays(-7);
+
             int page = rangeInfo.ContainsKey("page") ? int.Parse(rangeInfo["page"]) : 0;
             int pageSize = rangeInfo.ContainsKey("pagesize") ? int.Parse(rangeInfo["pagesize"]) : 10;
 
             string? filterUser = rangeInfo.ContainsKey("user") ? rangeInfo["user"] : null;
             IPAddress? filterIp = rangeInfo.ContainsKey("addr") ? IPAddress.Parse(rangeInfo["addr"]) : null;
+
+            if(account.Permissions < Permissions.Admin && (filterUser == null || filterUser != account.Name))
+            {
+                context.Request.Log(Logger.Severity.Alert, $"Unauthorized attempt to access logs.", account.Name);
+                RespondError(context, "You must be an admin to access another users logs.");
+                return;
+            }
 
             StringBuilder stringBuilder = new StringBuilder();
             

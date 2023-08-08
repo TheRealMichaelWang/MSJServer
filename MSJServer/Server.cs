@@ -58,7 +58,7 @@ namespace MSJServer
 
                 while (true)
                 {
-                    lock (sessions) //lock (sessionsToEnd)
+                    lock (sessions) lock (sessionsToEnd)
                     {
                         foreach (Session session in sessions.Values)
                         {

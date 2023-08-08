@@ -57,7 +57,7 @@ namespace MSJServer
                 }
                 accountSize = stream.Position;
             }
-            Logger.Log(Logger.Severity.Information, $"Finished loading {count} account(s), {accountOffsets} bytes.");
+            Logger.Log(Logger.Severity.Information, $"Finished loading {count} account(s), {accountSize} bytes.");
 
             if (Account.DatabaseVersion < Account.LatestDatabaseVersion || invalidAccountsDetected)
             {

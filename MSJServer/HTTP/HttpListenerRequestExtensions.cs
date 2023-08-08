@@ -20,7 +20,5 @@ namespace MSJServer.HTTP
         {
             Logger.Log(severity, message, user, request.RemoteEndPoint.Address);
         }
-
-        
     }
 }

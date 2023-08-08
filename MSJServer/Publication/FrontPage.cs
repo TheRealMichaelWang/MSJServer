@@ -10,6 +10,13 @@ namespace MSJServer
         {
             Dictionary<string, string> queryInfo = context.Request.GetGETData();
 
+            int page = 1;
+            if (queryInfo.ContainsKey("page") && (!int.TryParse(queryInfo["page"], out page) || page < 1))
+            {
+                RespondError(context, $"Invalid page number {queryInfo["page"]} given.");
+                return;
+            }
+
             Account? account = GetLoggedInAccount(context);
             string content;
             bool isEditor = false;
@@ -38,13 +45,8 @@ namespace MSJServer
             content = content.Replace("{DATE}", DateOnly.FromDateTime(DateTime.Now).ToLongDateString());
             content = content.Replace("{INVFLAGS}", queryInfo.ContainsKey("unpub") ? string.Empty : "&unpub=yes");
             content = content.Replace("{SECTION}", queryInfo.ContainsKey("unpub") ? "Published Works" : "Unpublished Works");
-            
-            int page = 1;
-            if (queryInfo.ContainsKey("page") && (!int.TryParse(queryInfo["page"], out page) || page < 1))
-            {
-                RespondError(context, $"Invalid page number {queryInfo["page"]} given.");
-                return;
-            }
+            content = content.Replace("{NEXTPAGE}", (page + 1).ToString());
+            content = content.Replace("{PREVPAGE}", (page - 1).ToString());
 
             Guid[] publishedArticles = Article.GetArticles(queryInfo.ContainsKey("unpub"), page, 10);
 

@@ -107,7 +107,7 @@ namespace MSJServer.HTTP
             }
             catch(Exception e)
             {
-                context.Request.Log(Logger.Severity.Warning, e.Message);
+                context.Request.Log(Logger.Severity.Alert, e.Message);
                 Respond500(context);
             }
         }

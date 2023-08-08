@@ -34,13 +34,13 @@ namespace MSJServer
             {
                 //32 digits, 4 dashes
                 Article article = FromFile(Guid.Parse(path.Substring(path.Length - 36, 36)));
-                loaded++;
 
                 if (excludeUnpublished)
                 {
                     if (article.PublishStatus == PublishStatus.Published)
                         continue;
 
+                    loaded++;
                     if (loaded > toLoad)
                     {
                         validArticles.Add(article.Id);
@@ -52,6 +52,7 @@ namespace MSJServer
                 }
                 else if (article.PublishStatus == PublishStatus.Published)
                 {
+                    loaded++;
                     if (loaded > toLoad)
                     {
                         validArticles.Add(article.Id);
@@ -71,10 +72,13 @@ namespace MSJServer
             switch (articleVersion)
             {
                 case 0:
-                    Logger.Log(Logger.Severity.Information, $"Upgrading article {id} from version 0.");
-                    return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), Guid.Empty, Guid.Empty);
+                    {
+                        Logger.Log(Logger.Severity.Information, $"Upgrading article {id} from version 0.");
+                        Article upgraded = new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), Guid.Empty, Guid.Empty);
+                        upgraded.Save();
+                        return upgraded;
+                    }
                 case 1:
-                    Logger.Log(Logger.Severity.Information, $"Upgrading article {id} from version 1.");
                     return new Article(id, reader.ReadString(), reader.ReadString(), reader.ReadString(), (PublishStatus)reader.ReadByte(), new DateTime(reader.ReadInt64()), new DateTime(reader.ReadInt64()), new Guid(reader.ReadBytes(16)), new Guid(reader.ReadBytes(16)));
                 default:
                     Logger.Log(Logger.Severity.Alert, $"Unable to load article {id} because of invalid version {articleVersion}.");
