@@ -1,10 +1,13 @@
 ﻿using System.Net;
 using System.Text;
+using System.Web;
 
 namespace MSJServer.HTTP
 {
     public partial class HTTPServer
     {
+        protected static string ToGetParams(Dictionary<string, string> @params) => string.Join('&', @params.Select((@param) => $"{HttpUtility.UrlEncode(@param.Key)}={HttpUtility.UrlEncode(@param.Value)}"));
+
         public string Hostname => "*";
 
         public string Scheme => "http";

@@ -161,7 +161,7 @@ namespace MSJServer
             DateTime from = rangeInfo.ContainsKey("span") ? to.AddDays(-double.Parse(rangeInfo["span"])) : to.AddDays(-7);
 
             int page = rangeInfo.ContainsKey("page") ? int.Parse(rangeInfo["page"]) : 0;
-            int pageSize = rangeInfo.ContainsKey("pagesize") ? int.Parse(rangeInfo["pagesize"]) : 10;
+            int pageSize = rangeInfo.ContainsKey("pagesize") ? int.Parse(rangeInfo["pagesize"]) : 25;
 
             string? filterUser = rangeInfo.ContainsKey("user") ? rangeInfo["user"] : null;
             IPAddress? filterIp = rangeInfo.ContainsKey("addr") ? IPAddress.Parse(rangeInfo["addr"]) : null;
@@ -174,8 +174,16 @@ namespace MSJServer
             }
 
             StringBuilder stringBuilder = new StringBuilder();
-            
-            stringBuilder.Append("<table><tr><th>Severity</th><th>Timestamp</th><th>Description</th>");
+            stringBuilder.Append(File.ReadAllText("templates/view_log_header.html"));
+
+            stringBuilder.Append($"<center><h1>Logs from {from} to {to}</h1>");
+            if (filterUser != null)
+                stringBuilder.Append($"Filter User {filterUser}<br>");
+            if (filterIp != null)
+                stringBuilder.Append($"Filter IP {filterIp}<br>");
+            stringBuilder.Append("</center>");
+
+            stringBuilder.Append("<table border=\"1|0\"><tr><th>Severity</th><th>Timestamp</th><th>Description</th>");
             if (filterUser == null)
                 stringBuilder.Append("<th>Username</th>");
             if (filterIp == null)
@@ -190,6 +198,16 @@ namespace MSJServer
                     stringBuilder.Append(@event.Address == null ? "<td>N/A</td>" : $"<td>{@event.Address}</td>");
                 stringBuilder.Append("</tr>");
             }
+            stringBuilder.Append("</table><br>");
+
+            if (page > 0)
+            {
+                rangeInfo["page"] = (page - 1).ToString();
+                stringBuilder.Append($"<a href =\"logs?{ToGetParams(rangeInfo)}\" class=\"btn - outline - secondary\" type=\"button\">Prev</a>");
+            }
+            rangeInfo["page"] = (page + 1).ToString();
+            stringBuilder.Append($"<a href =\"logs?{ToGetParams(rangeInfo)}\" class=\"btn - outline - secondary\" type=\"button\">Next</a>");
+            stringBuilder.Append(File.ReadAllText("templates/view_log_footer.html"));
 
             Respond202(context, stringBuilder.ToString());
         }
